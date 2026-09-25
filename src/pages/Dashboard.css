@@ -1,0 +1,67 @@
+/* --- Dashboard V2 Scoped Styles --- */
+
+/* Override font settings for this component to match Outcrowd style */
+.dashboard-v2 {
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+}
+
+/* Diagonal hatched texture pattern for allocation cards */
+.dashboard-v2 .hatch-pattern {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgba(255, 255, 255, 0.04),
+    rgba(255, 255, 255, 0.04) 3px,
+    transparent 3px,
+    transparent 9px
+  );
+}
+
+.dashboard-v2 .orange-mesh {
+  background: linear-gradient(135deg, #ff542e 0%, #ff3b10 50%, #e03007 100%);
+}
+
+/* Reset buttons to transparent/no border for Tailwind-like behavior but low specificity */
+:where(.dashboard-v2 button) {
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+/* Custom range slider styling */
+.dashboard-v2 input[type=range] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: #23242a;
+  height: 6px;
+  border-radius: 9999px;
+  outline: none;
+}
+
+.dashboard-v2 input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 18px;
+  width: 18px;
+  border-radius: 50%;
+  background: #ffffff;
+  cursor: pointer;
+  border: 3px solid #ff542e;
+  box-shadow: 0 0 8px rgba(255, 84, 46, 0.5);
+  transition: transform 0.15s ease;
+}
+
+.dashboard-v2 input[type=range]::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+/* SVG Transitions */
+.dashboard-v2 .chart-path {
+  transition: d 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Smooth transitions for all elements in dashboard */
+.dashboard-v2 * {
+  transition-property: background-color, border-color, color, box-shadow, transform;
+  transition-duration: 150ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}

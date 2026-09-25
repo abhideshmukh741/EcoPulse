@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>eco-pulse</title>
+    <!-- Google Fonts: Inter & Plus Jakarta Sans for crisp fintech typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Tailwind CSS CDN for isolated Dashboard styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        corePlugins: { preflight: false },
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+              mono: ['"JetBrains Mono"', 'monospace'],
+            },
+            colors: {
+              brand: {
+                charcoal: '#0d0e11',
+                card: '#16171b',
+                cardHover: '#1c1d22',
+                border: '#23242a',
+                subtle: '#2a2c34',
+                orange: '#ff542e',
+                orangeLight: '#ff6f4e',
+                orangeDark: '#e0431f',
+                accentYellow: '#fec84b',
+                accentTeal: '#14b8a6',
+                accentGreen: '#22c55e',
+                accentBlue: '#38bdf8',
+              }
+            },
+            boxShadow: {
+              'orange-glow': '0 12px 36px -4px rgba(255, 84, 46, 0.45)',
+              'card-soft': '0 4px 20px -2px rgba(0, 0, 0, 0.4)',
+              'inner-glow': 'inset 0 1px 1px 0 rgba(255, 255, 255, 0.08)',
+            }
+          }
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
