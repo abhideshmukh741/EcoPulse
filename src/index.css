@@ -6079,3 +6079,10 @@ body.light .predictions-glass-card:hover {
   box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
 }
 
+.light .carbon-banner h2 {
+  color: #ffffff !important;
+}
+
+.light .carbon-banner p {
+  color: #cbd5e1 !important;
+}

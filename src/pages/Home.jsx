@@ -258,13 +258,13 @@ export default function Home() {
 
           {/* Carbon Performance Banner */}
           <ScrollReveal variant="fadeLeft" delay={0.2} duration={0.8}>
-            <div className="bg-[#0F172A] dark:bg-[#1A1C23] rounded-[3rem] p-10 md:p-14 border border-[#1E293B] dark:border-[#2C2E33] text-white shadow-2xl relative overflow-hidden">
+            <div className="bg-[#0F172A] dark:bg-[#1A1C23] rounded-[3rem] p-10 md:p-14 border border-[#1E293B] dark:border-[#2C2E33] text-white shadow-2xl relative overflow-hidden carbon-banner">
               <div className="absolute top-0 right-0 w-64 h-64 bg-[#059669]/20 rounded-full blur-[80px]"></div>
               <div className="absolute bottom-0 left-0 w-64 h-64 bg-[#4F46E5]/20 rounded-full blur-[80px]"></div>
               
               <div className="relative z-10">
-                <h2 className="text-4xl font-extrabold mb-4 text-white" style={{ color: 'white' }}>Campus Carbon Performance</h2>
-                <p className="text-lg text-slate-300 font-medium mb-12 leading-relaxed" style={{ color: '#cbd5e1' }}>
+                <h2 className="text-4xl font-extrabold mb-4 text-white">Campus Carbon Performance</h2>
+                <p className="text-lg text-slate-300 font-medium mb-12 leading-relaxed">
                   EcoPulse combines infrastructure, energy, transportation, and waste data to provide a unified view of campus environmental performance.
                 </p>
 
