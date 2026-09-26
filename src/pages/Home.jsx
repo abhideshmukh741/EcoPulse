@@ -263,8 +263,8 @@ export default function Home() {
               <div className="absolute bottom-0 left-0 w-64 h-64 bg-[#4F46E5]/20 rounded-full blur-[80px]"></div>
               
               <div className="relative z-10">
-                <h2 className="text-4xl font-extrabold mb-4 !text-white">Campus Carbon Performance</h2>
-                <p className="text-lg !text-slate-300 font-medium mb-12 leading-relaxed">
+                <h2 className="text-4xl font-extrabold mb-4 text-white">Campus Carbon Performance</h2>
+                <p className="text-lg text-slate-300 font-medium mb-12 leading-relaxed">
                   EcoPulse combines infrastructure, energy, transportation, and waste data to provide a unified view of campus environmental performance.
                 </p>
 
