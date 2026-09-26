@@ -31,15 +31,25 @@ const chartPaths = {
   }
 };
 
-// Department emission share weights (must match ticker multipliers below)
+// Department emission share weights — calculated from real equipment profiles
+// Method: Per-dept kW (PCs×300W + Monitors×50W + ACs×1.5kW + Servers×500W + Workshop + Lights + Projector)
+//         × 8 hrs/day × 250 working days × 0.000716 T/kWh (India CEA 2023 grid EF)
+//         ÷ Campus total 1858.72 T/yr = pct share
 const DEPT_WEIGHTS = {
-  cse:        { label: "CSE & Data",   short: "CS", pct: 0.076, color: "bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400",     bar: "#3b82f6" },
-  aids:       { label: "AI & DS Labs", short: "AI", pct: 0.053, color: "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400", bar: "#10b981" },
-  mech:       { label: "Mechanical",   short: "ME", pct: 0.067, color: "bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400",   bar: "#f59e0b" },
-  civil:      { label: "Civil Engg",   short: "CE", pct: 0.034, color: "bg-purple-100 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400", bar: "#8b5cf6" },
-  electrical: { label: "Electrical",   short: "EE", pct: 0.046, color: "bg-sky-100 dark:bg-sky-500/20 text-sky-600 dark:text-sky-400",         bar: "#06b6d4" },
-  plastic:    { label: "Plastic & Poly",short: "PE", pct: 0.041, color: "bg-pink-100 dark:bg-pink-500/20 text-pink-600 dark:text-pink-400",       bar: "#ec4899" },
-  agri:       { label: "Agri Engg",    short: "AG", pct: 0.029, color: "bg-lime-100 dark:bg-lime-500/20 text-lime-600 dark:text-lime-400",       bar: "#84cc16" },
+  cse:        { label: "CSE & Data",    short: "CS", pct: 0.0909, color: "bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400",     bar: "#3b82f6",
+                equip: "6 labs × 40 PCs, 3 ACs each, 4 servers • 118 kW total → 169 T/yr" },
+  aids:       { label: "AI & DS Labs",  short: "AI", pct: 0.0578, color: "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400", bar: "#10b981",
+                equip: "4 labs × 35 PCs, 3 ACs each, 6 GPU servers • 75 kW total → 107 T/yr" },
+  mech:       { label: "Mechanical",    short: "ME", pct: 0.0664, color: "bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400",   bar: "#f59e0b",
+                equip: "5 labs × 15 PCs, CNC/lathe/welding 45 kW workshop • 86 kW total → 124 T/yr" },
+  civil:      { label: "Civil Engg",    short: "CE", pct: 0.0285, color: "bg-purple-100 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400", bar: "#8b5cf6",
+                equip: "3 labs × 20 PCs, material testing 8 kW • 37 kW total → 53 T/yr" },
+  electrical: { label: "Electrical",    short: "EE", pct: 0.0539, color: "bg-sky-100 dark:bg-sky-500/20 text-sky-600 dark:text-sky-400",         bar: "#06b6d4",
+                equip: "4 labs × 20 PCs, power electronics/motor rigs 25 kW • 70 kW total → 100 T/yr" },
+  plastic:    { label: "Plastic & Poly",short: "PE", pct: 0.0453, color: "bg-pink-100 dark:bg-pink-500/20 text-pink-600 dark:text-pink-400",       bar: "#ec4899",
+                equip: "3 labs × 15 PCs, injection molding/extruder 35 kW • 59 kW total → 84 T/yr" },
+  agri:       { label: "Agri Engg",     short: "AG", pct: 0.0158, color: "bg-lime-100 dark:bg-lime-500/20 text-lime-600 dark:text-lime-400",       bar: "#84cc16",
+                equip: "2 labs × 15 PCs, soil/pump testing 5 kW • 21 kW total → 29 T/yr" },
 };
 
 const DEFAULT_CAPS = { cse: 420, aids: 310, mech: 340, civil: 180, electrical: 290, plastic: 260, agri: 210 };
@@ -286,6 +296,20 @@ export default function Dashboard() {
   const displayTotal = Number(newTotal).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   
   const currentPath = chartPaths[activePeriod];
+  
+  const peakValue = (newTotal * 0.1678).toFixed(1);
+  
+  const getXAxisLabels = () => {
+    switch(activePeriod) {
+      case '1D': return ['00:00', '04:00', '08:00', '12:00 (Mid)', '16:00', '20:00', '23:59'];
+      case '1W': return ['MON', 'TUE', 'WED', 'THU (Mid)', 'FRI', 'SAT', 'SUN'];
+      case '1M': return ['Day 1', 'Day 5', 'Day 10', 'Day 15 (Mid)', 'Day 20', 'Day 25', 'Day 30'];
+      case 'ALL': return ['2021', '2022', '2023', '2024 (Mid)', '2025', '2026', '2027'];
+      case '1Y':
+      default: return ['JAN', 'MAR', 'MAY', 'JUL (Mid)', 'SEP', 'NOV', 'DEC'];
+    }
+  };
+  const xAxisLabels = getXAxisLabels();
 
   return (
     <div className="dashboard-v2 selection:bg-brand-orange selection:text-white">
@@ -491,20 +515,20 @@ export default function Dashboard() {
                 <g transform="translate(425, 30)">
                   <rect x="0" y="0" width="105" height="48" rx="10" fill="#141519" fillOpacity="0.95" stroke="#ffffff" strokeOpacity="0.2" />
                   <text x="12" y="20" fill="#94a3b8" fontSize="10" fontFamily="Plus Jakarta Sans">Peak (Term-Start)</text>
-                  <text x="12" y="38" fill="#ffffff" fontSize="13" fontWeight="700" fontFamily="JetBrains Mono">312 T CO₂e</text>
+                  <text x="12" y="38" fill="#ffffff" fontSize="13" fontWeight="700" fontFamily="JetBrains Mono">{peakValue} T CO₂e</text>
                 </g>
               </svg>
             </div>
 
             {/* Bottom Month Tickers */}
             <div className="flex items-center justify-between text-[11px] font-mono font-medium text-white/75 pt-2 border-t border-white/20 relative z-10">
-              <span>JAN</span>
-              <span>MAR</span>
-              <span>MAY</span>
-              <span className="text-white font-bold bg-white/20 px-2 py-0.5 rounded">JUL (Mid)</span>
-              <span>SEP</span>
-              <span>NOV</span>
-              <span>DEC</span>
+              <span>{xAxisLabels[0]}</span>
+              <span>{xAxisLabels[1]}</span>
+              <span>{xAxisLabels[2]}</span>
+              <span className="text-white font-bold bg-white/20 px-2 py-0.5 rounded">{xAxisLabels[3]}</span>
+              <span>{xAxisLabels[4]}</span>
+              <span>{xAxisLabels[5]}</span>
+              <span>{xAxisLabels[6]}</span>
             </div>
 
             <div className="absolute -right-20 -top-20 w-80 h-80 bg-yellow-300/25 rounded-full blur-3xl pointer-events-none"></div>
@@ -532,6 +556,7 @@ export default function Dashboard() {
               return (
                 <div
                   key={key}
+                  title={dept.equip}
                   className={`relative bg-slate-50 dark:bg-[#1a1c22] hover:bg-slate-100 dark:hover:bg-brand-cardHover border rounded-xl p-3 cursor-pointer transition ${
                     exceeded
                       ? 'border-rose-400 dark:border-rose-500 shadow-[0_0_0_2px_rgba(244,63,94,0.18)]'
@@ -567,6 +592,7 @@ export default function Dashboard() {
                     <span>{usePct}% of cap</span>
                     <span>{cap}T</span>
                   </div>
+                  <p className="mt-1.5 text-[8px] leading-tight text-slate-400 dark:text-slate-500 line-clamp-2">{dept.equip}</p>
                 </div>
               );
             })}

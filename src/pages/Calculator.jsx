@@ -415,7 +415,7 @@ export default function Calculator() {
                       style={{ strokeDashoffset: 239 - (239 * auditResult.naacScore) / 100, transition: "stroke-dashoffset 0.7s ease" }}
                       className="drop-shadow-[0_0_5px_rgba(16,185,129,0.5)]" />
                   </svg>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center rotate-90">
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
                     <strong className="text-lg font-black text-[#0F172A] dark:text-white leading-none">{auditResult.naacGrade}</strong>
                     <span className="text-[8px] font-bold text-[#94A3B8] uppercase">{auditResult.naacScore}/100 NAAC</span>
                   </div>

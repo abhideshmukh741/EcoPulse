@@ -15,7 +15,7 @@ const ToggleSwitch = ({ isOn, handleToggle }) => {
 };
 
 export default function AdminSettings() {
-  const [collegeName, setCollegeName] = useState("Maharashtra Institute of Technology");
+  const [collegeName, setCollegeName] = useState("EcoPulse Campus");
   const [campusAcres, setCampusAcres] = useState("15");
   const [totalStudents, setTotalStudents] = useState("4180");
   const [naacAccreditation, setNaacAccreditation] = useState("NAAC 'A' Grade + Autonomous");

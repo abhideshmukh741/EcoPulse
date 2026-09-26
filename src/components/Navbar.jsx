@@ -28,7 +28,7 @@ export default function Navbar({ adminUser, onToggleAdmin, onOpenAdminModal, onN
         <div className="logo-icon admin-logo-icon"><Building2 size={20} /></div>
         <span className="logo-brand">EcoPulse</span>
         <span className="logo-separator">•</span>
-        <span className="logo-college-pill">MIT Sambhajinagar</span>
+        <span className="logo-college-pill">EcoPulse Campus</span>
       </Link>
 
       {/* Desktop nav links */}

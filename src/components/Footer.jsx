@@ -10,14 +10,13 @@ export default function Footer({ onOpenAdmin }) {
             <div className="logo-icon admin-logo-icon">
               <Building2 size={20} />
             </div>
-            EcoPulse • MIT Sambhajinagar
+            EcoPulse • Green Campus
           </Link>
 
-          <p>Maharashtra Institute of Technology, Chh. Sambhajinagar</p>
+          <p>EcoPulse University, Green Campus</p>
 
-          <span>
-            Dedicated administrative portal for Maharashtra Institute of Technology,
-            Chh. Sambhajinagar — NAAC Green Audit compliance & campus-wide Net-Zero operational tracking.
+            Dedicated administrative portal for EcoPulse University,
+            Green Campus — NAAC Green Audit compliance & campus-wide Net-Zero operational tracking.
           </span>
         </div>
 
