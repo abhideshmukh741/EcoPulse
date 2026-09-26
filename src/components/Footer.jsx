@@ -15,6 +15,7 @@ export default function Footer({ onOpenAdmin }) {
 
           <p>EcoPulse University, Green Campus</p>
 
+          <span>
             Dedicated administrative portal for EcoPulse University,
             Green Campus — NAAC Green Audit compliance & campus-wide Net-Zero operational tracking.
           </span>
