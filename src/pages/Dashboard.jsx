@@ -31,12 +31,34 @@ const chartPaths = {
   }
 };
 
+// Department emission share weights (must match ticker multipliers below)
+const DEPT_WEIGHTS = {
+  cse:        { label: "CSE & Data",   short: "CS", pct: 0.076, color: "bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400",     bar: "#3b82f6" },
+  aids:       { label: "AI & DS Labs", short: "AI", pct: 0.053, color: "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400", bar: "#10b981" },
+  mech:       { label: "Mechanical",   short: "ME", pct: 0.067, color: "bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400",   bar: "#f59e0b" },
+  civil:      { label: "Civil Engg",   short: "CE", pct: 0.034, color: "bg-purple-100 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400", bar: "#8b5cf6" },
+  electrical: { label: "Electrical",   short: "EE", pct: 0.046, color: "bg-sky-100 dark:bg-sky-500/20 text-sky-600 dark:text-sky-400",         bar: "#06b6d4" },
+  plastic:    { label: "Plastic & Poly",short: "PE", pct: 0.041, color: "bg-pink-100 dark:bg-pink-500/20 text-pink-600 dark:text-pink-400",       bar: "#ec4899" },
+  agri:       { label: "Agri Engg",    short: "AG", pct: 0.029, color: "bg-lime-100 dark:bg-lime-500/20 text-lime-600 dark:text-lime-400",       bar: "#84cc16" },
+};
+
+const DEFAULT_CAPS = { cse: 420, aids: 310, mech: 340, civil: 180, electrical: 290, plastic: 260, agri: 210 };
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const [labs, setLabs] = useState(24);
+  const [pcsPerLab, setPcsPerLab] = useState(30);
+  const [acsPerLab, setAcsPerLab] = useState(2);
+  const [labHours, setLabHours] = useState(8);
   const [hvac, setHvac] = useState(8);
   const [evShare, setEvShare] = useState(25);
   const [activePeriod, setActivePeriod] = useState("1Y");
+  const [deptCaps, setDeptCaps] = useState(() => {
+    try {
+      const saved = localStorage.getItem("ecopulse_admin_caps");
+      return saved ? { ...DEFAULT_CAPS, ...JSON.parse(saved) } : DEFAULT_CAPS;
+    } catch { return DEFAULT_CAPS; }
+  });
   
   const [syncing, setSyncing] = useState(false);
   const [synced, setSynced] = useState(false);
@@ -129,11 +151,19 @@ export default function Dashboard() {
       showToast(`⚡ Live Telemetry Synced: ${type}`);
     };
 
+    // Reload caps if admin saves settings in another tab
+    const handleStorage = (e) => {
+      loadLiveTelemetry();
+      if (e?.key === "ecopulse_admin_caps" && e.newValue) {
+        try { setDeptCaps({ ...DEFAULT_CAPS, ...JSON.parse(e.newValue) }); } catch {}
+      }
+    };
+
     window.addEventListener("ecopulse_data_updated", handleUpdate);
-    window.addEventListener("storage", loadLiveTelemetry);
+    window.addEventListener("storage", handleStorage);
     return () => {
       window.removeEventListener("ecopulse_data_updated", handleUpdate);
-      window.removeEventListener("storage", loadLiveTelemetry);
+      window.removeEventListener("storage", handleStorage);
     };
   }, []);
 
@@ -201,16 +231,47 @@ export default function Dashboard() {
 
   const resetSliders = () => {
     setLabs(24);
+    setPcsPerLab(30);
+    setAcsPerLab(2);
+    setLabHours(8);
     setHvac(8);
     setEvShare(25);
     setActivePeriod("1Y");
     showToast('Parameters reset to verified institutional baseline.');
   };
 
-  // Math Logic Fix: Scale the slider deltas by the selected time period
-  const deltaLabs = (labs - 24) * 8.5;
-  const deltaHvac = (hvac - 8) * 16.2;
-  const deltaEV = (evShare - 25) * -1.8;
+  // ── Equipment-Based Carbon Calculation ──────────────────────────────────────
+  // Power consumption per equipment (in kW)
+  const PC_KW        = 0.30;   // Desktop computer ~300W avg under load
+  const MONITOR_KW   = 0.05;   // LCD monitor ~50W
+  const AC_KW        = 1.50;   // 1.5-ton split AC ~1500W
+  const LIGHT_KW     = 0.20;   // Lights per lab ~200W
+  const PROJECTOR_KW = 0.30;   // Projector ~300W
+  const GRID_EF      = 0.000716; // India CEA 2023: 0.716 kg CO2/kWh = T/MWh
+  const WORKING_DAYS = 250;    // ~250 academic working days/year
+
+  // Per-lab power (kW) = PCs + Monitors + ACs + Lights + Projector
+  const labKW = (pcsPerLab * PC_KW) + (pcsPerLab * MONITOR_KW) + (acsPerLab * AC_KW) + LIGHT_KW + PROJECTOR_KW;
+  // Per-lab daily kWh
+  const labDailyKWh = labKW * labHours;
+  // Per-lab daily CO2 (Tons)
+  const labDailyCO2 = labDailyKWh * GRID_EF;
+  // Per-lab annual CO2 (Tons)
+  const labAnnualCO2 = labDailyCO2 * WORKING_DAYS;
+
+  // Total labs annual delta vs baseline (24 labs, 30 PCs, 2 ACs, 8 hrs)
+  const baselineLabKW = (30 * PC_KW) + (30 * MONITOR_KW) + (2 * AC_KW) + LIGHT_KW + PROJECTOR_KW; // 14 kW
+  const baselineLabAnnualCO2 = baselineLabKW * 8 * GRID_EF * WORKING_DAYS; // ~20.05 T/lab/yr
+  const deltaLabs = (labs * labAnnualCO2) - (24 * baselineLabAnnualCO2);
+
+  // HVAC: Central HVAC draws ~150 kW campus-wide, scale by hours
+  const HVAC_CAMPUS_KW = 150;
+  const deltaHvac = (hvac - 8) * HVAC_CAMPUS_KW * GRID_EF * WORKING_DAYS;
+
+  // EV/CNG fleet: Baseline fleet emits ~330 T/yr (scope 1 transport), clean vehicles offset
+  const FLEET_BASELINE_ANNUAL = 330;
+  const deltaEV = -((evShare - 25) / 100) * FLEET_BASELINE_ANNUAL;
+
   const yearlyDelta = deltaLabs + deltaHvac + deltaEV;
 
   let scale = 1;
@@ -451,6 +512,7 @@ export default function Dashboard() {
           </ScrollReveal>
         </div>
 
+        {/* ── Departmental Emission Tickers with Cap Warnings ───────────────── */}
         <ScrollReveal variant="fadeUp" delay={0.1} duration={0.5}>
         <div className="bg-white dark:bg-brand-card rounded-2xl p-4 border border-slate-200 dark:border-brand-border shadow-sm dark:shadow-none">
           <div className="flex items-center justify-between mb-3 px-1">
@@ -458,94 +520,136 @@ export default function Dashboard() {
               <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Departmental Emission Tickers</span>
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400"></span>
             </div>
-            <span className="text-xs text-slate-500 font-mono">7 Academic Departments + Admin</span>
+            <span className="text-xs text-slate-500 font-mono">7 Academic Departments</span>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-            {/* CSE */}
-            <div className="bg-slate-50 dark:bg-[#1a1c22] hover:bg-slate-100 dark:hover:bg-brand-cardHover border border-slate-200 dark:border-brand-border rounded-xl p-3 cursor-pointer group transition">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-lg bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center text-xs font-bold">CS</div>
-                  <span className="text-xs font-semibold text-slate-900 dark:text-white">CSE & Data</span>
-                </div>
-                <span className="text-[10px] font-mono text-rose-500 dark:text-rose-400 font-medium">+2.1%</span>
-              </div>
-              <div className="mt-2 flex items-baseline justify-between">
-                <span className="text-base font-bold text-slate-900 dark:text-white font-mono">{Math.round(telemetry.netTons * 0.076)} <span className="text-[10px] text-slate-500 dark:text-slate-400">T</span></span>
-                <svg className="w-16 h-5 text-rose-500" viewBox="0 0 60 20" fill="none">
-                  <path d="M2 14 L15 12 L28 16 L42 6 L58 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                </svg>
-              </div>
-            </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
+            {Object.entries(DEPT_WEIGHTS).map(([key, dept]) => {
+              const actual = Math.round(telemetry.netTons * dept.pct);
+              const cap = deptCaps[key];
+              const exceeded = actual > cap;
+              const usePct = Math.min(100, Math.round((actual / cap) * 100));
+              return (
+                <div
+                  key={key}
+                  className={`relative bg-slate-50 dark:bg-[#1a1c22] hover:bg-slate-100 dark:hover:bg-brand-cardHover border rounded-xl p-3 cursor-pointer transition ${
+                    exceeded
+                      ? 'border-rose-400 dark:border-rose-500 shadow-[0_0_0_2px_rgba(244,63,94,0.18)]'
+                      : 'border-slate-200 dark:border-brand-border'
+                  }`}
+                >
+                  {/* Over-limit badge */}
+                  {exceeded && (
+                    <span className="absolute -top-2 -right-2 z-10 bg-rose-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-md animate-pulse">
+                      OVER LIMIT
+                    </span>
+                  )}
 
-            {/* AI & DS */}
-            <div className="bg-slate-50 dark:bg-[#1a1c22] hover:bg-slate-100 dark:hover:bg-brand-cardHover border border-slate-200 dark:border-brand-border rounded-xl p-3 cursor-pointer group transition">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-lg bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xs font-bold">AI</div>
-                  <span className="text-xs font-semibold text-slate-900 dark:text-white">AI &amp; DS Labs</span>
-                </div>
-                <span className="text-[10px] font-mono text-emerald-500 dark:text-emerald-400 font-medium">-4.5%</span>
-              </div>
-              <div className="mt-2 flex items-baseline justify-between">
-                <span className="text-base font-bold text-slate-900 dark:text-white font-mono">{Math.round(telemetry.netTons * 0.053)} <span className="text-[10px] text-slate-500 dark:text-slate-400">T</span></span>
-                <svg className="w-16 h-5 text-emerald-500 dark:text-emerald-400" viewBox="0 0 60 20" fill="none">
-                  <path d="M2 5 L15 8 L28 4 L42 15 L58 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                </svg>
-              </div>
-            </div>
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <div className={`w-6 h-6 rounded-lg ${dept.color} flex items-center justify-center text-xs font-bold shrink-0`}>{dept.short}</div>
+                    <span className="text-[11px] font-semibold text-slate-900 dark:text-white leading-tight">{dept.label}</span>
+                  </div>
 
-            {/* Mechanical */}
-            <div className="bg-slate-50 dark:bg-[#1a1c22] hover:bg-slate-100 dark:hover:bg-brand-cardHover border border-slate-200 dark:border-brand-border rounded-xl p-3 cursor-pointer group transition">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-lg bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center text-xs font-bold">ME</div>
-                  <span className="text-xs font-semibold text-slate-900 dark:text-white">Mechanical</span>
-                </div>
-                <span className="text-[10px] font-mono text-slate-400 font-medium">0.0%</span>
-              </div>
-              <div className="mt-2 flex items-baseline justify-between">
-                <span className="text-base font-bold text-slate-900 dark:text-white font-mono">124 <span className="text-[10px] text-slate-500 dark:text-slate-400">T</span></span>
-                <svg className="w-16 h-5 text-amber-500 dark:text-amber-400" viewBox="0 0 60 20" fill="none">
-                  <path d="M2 10 L15 9 L28 11 L42 10 L58 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                </svg>
-              </div>
-            </div>
+                  <div className="text-base font-bold text-slate-900 dark:text-white font-mono">
+                    {actual} <span className="text-[10px] text-slate-500 dark:text-slate-400">T</span>
+                  </div>
 
-            {/* Civil */}
-            <div className="bg-slate-50 dark:bg-[#1a1c22] hover:bg-slate-100 dark:hover:bg-brand-cardHover border border-slate-200 dark:border-brand-border rounded-xl p-3 cursor-pointer group transition">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-lg bg-purple-100 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400 flex items-center justify-center text-xs font-bold">CE</div>
-                  <span className="text-xs font-semibold text-slate-900 dark:text-white">Civil Engg</span>
+                  {/* Mini progress bar: actual vs cap */}
+                  <div className="mt-2 h-1.5 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-700 ${
+                        exceeded ? 'bg-rose-500' : usePct > 80 ? 'bg-amber-400' : 'bg-emerald-500'
+                      }`}
+                      style={{ width: `${usePct}%` }}
+                    />
+                  </div>
+                  <div className="mt-1 flex justify-between text-[9px] font-mono text-slate-400">
+                    <span>{usePct}% of cap</span>
+                    <span>{cap}T</span>
+                  </div>
                 </div>
-                <span className="text-[10px] font-mono text-emerald-500 dark:text-emerald-400 font-medium">-1.8%</span>
-              </div>
-              <div className="mt-2 flex items-baseline justify-between">
-                <span className="text-base font-bold text-slate-900 dark:text-white font-mono">64 <span className="text-[10px] text-slate-500 dark:text-slate-400">T</span></span>
-                <svg className="w-16 h-5 text-emerald-500 dark:text-emerald-400" viewBox="0 0 60 20" fill="none">
-                  <path d="M2 6 L18 8 L32 14 L46 12 L58 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                </svg>
-              </div>
-            </div>
+              );
+            })}
+          </div>
+        </div>
+        </ScrollReveal>
 
-            {/* Electrical */}
-            <div className="bg-slate-50 dark:bg-[#1a1c22] hover:bg-slate-100 dark:hover:bg-brand-cardHover border border-slate-200 dark:border-brand-border rounded-xl p-3 cursor-pointer group transition">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-lg bg-sky-100 dark:bg-sky-500/20 text-sky-600 dark:text-sky-400 flex items-center justify-center text-xs font-bold">EE</div>
-                  <span className="text-xs font-semibold text-slate-900 dark:text-white">Electrical</span>
-                </div>
-                <span className="text-[10px] font-mono text-rose-500 dark:text-rose-400 font-medium">+1.4%</span>
-              </div>
-              <div className="mt-2 flex items-baseline justify-between">
-                <span className="text-base font-bold text-slate-900 dark:text-white font-mono">86 <span className="text-[10px] text-slate-500 dark:text-slate-400">T</span></span>
-                <svg className="w-16 h-5 text-rose-500 dark:text-rose-400" viewBox="0 0 60 20" fill="none">
-                  <path d="M2 15 L14 12 L28 14 L42 8 L58 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                </svg>
-              </div>
+        {/* ── Department vs Carbon Ceiling Bar Chart ────────────────────────── */}
+        <ScrollReveal variant="fadeUp" delay={0.15} duration={0.5}>
+        <div className="bg-white dark:bg-brand-card rounded-2xl p-6 border border-slate-200 dark:border-brand-border shadow-sm dark:shadow-none">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-5">
+            <div>
+              <div className="text-xs font-mono uppercase text-brand-orange font-bold mb-0.5">Carbon Ceiling Analysis</div>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white tracking-tight">Department Actual Emissions vs Admin-Set Ceilings</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Ceilings configurable in Admin Settings · Red = Limit Breached</p>
             </div>
+            <div className="flex items-center gap-4 text-[11px] font-mono shrink-0">
+              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-emerald-500"></span>Within Limit</span>
+              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-amber-400"></span>&gt;80% of Cap</span>
+              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-rose-500"></span>Exceeded Cap</span>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            {Object.entries(DEPT_WEIGHTS).map(([key, dept]) => {
+              const actual = Math.round(telemetry.netTons * dept.pct);
+              const cap = deptCaps[key];
+              const exceeded = actual > cap;
+              const actualPct = Math.min(100, (actual / cap) * 100);
+              const barColor = exceeded ? '#ef4444' : actualPct > 80 ? '#f59e0b' : '#10b981';
+              return (
+                <div key={key}>
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-5 h-5 rounded-md ${dept.color} flex items-center justify-center text-[10px] font-bold shrink-0`}>{dept.short}</div>
+                      <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">{dept.label}</span>
+                      {exceeded && (
+                        <span className="text-[9px] font-bold bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 px-1.5 py-0.5 rounded-full border border-rose-200 dark:border-rose-500/30">
+                          ⚠ {actual - cap}T OVER
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3 text-xs font-mono">
+                      <span className={`font-bold ${exceeded ? 'text-rose-500' : 'text-slate-900 dark:text-white'}`}>{actual}T</span>
+                      <span className="text-slate-400">/ {cap}T cap</span>
+                    </div>
+                  </div>
+
+                  {/* Stacked bar: actual + cap marker */}
+                  <div className="relative h-5 rounded-lg bg-slate-100 dark:bg-slate-800 overflow-visible">
+                    {/* Cap reference line */}
+                    <div
+                      className="absolute top-0 bottom-0 w-px bg-slate-900 dark:bg-white z-10"
+                      style={{ left: '100%', transform: 'none' }}
+                      title={`Cap: ${cap}T`}
+                    />
+                    {/* Actual bar */}
+                    <div
+                      className="h-full rounded-lg transition-all duration-700 flex items-center px-2"
+                      style={{ width: `${Math.min(100, actualPct)}%`, backgroundColor: barColor }}
+                    >
+                      {actualPct > 20 && (
+                        <span className="text-[9px] font-bold text-white font-mono">{Math.round(actualPct)}%</span>
+                      )}
+                    </div>
+                    {/* Overflow overflow indicator */}
+                    {exceeded && (
+                      <div
+                        className="absolute top-0 h-full rounded-r-lg bg-rose-200 dark:bg-rose-900/40 border-l-2 border-rose-500 flex items-center px-1"
+                        style={{ left: '100%', width: `${Math.min(30, ((actual - cap) / cap) * 100)}%` }}
+                      />
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="mt-5 pt-4 border-t border-slate-100 dark:border-brand-border/70 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+            <span>Ceilings are set in <button onClick={() => navigate('/admin')} className="text-brand-orange hover:underline font-semibold bg-transparent border-none cursor-pointer p-0">Admin Settings →</button></span>
+            <span className="font-mono">
+              {Object.entries(DEPT_WEIGHTS).filter(([k]) => Math.round(telemetry.netTons * DEPT_WEIGHTS[k].pct) > deptCaps[k]).length} / {Object.keys(DEPT_WEIGHTS).length} depts over ceiling
+            </span>
           </div>
         </div>
         </ScrollReveal>
@@ -686,30 +790,73 @@ export default function Dashboard() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-slate-200 dark:border-brand-border">
             <div>
               <div className="text-xs font-mono uppercase text-brand-orange font-bold">Interactive Carbon Simulator</div>
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white">Adjust Campus Parameters to Recalculate Live Footprint</h2>
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white">Equipment-Based Lab Emission Calculator</h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Uses India CEA 2023 Grid Emission Factor: 0.716 kg CO2/kWh</p>
             </div>
             <button onClick={resetSliders} className="self-start sm:self-auto text-xs text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white px-3 py-1.5 rounded-lg border border-slate-300 dark:border-brand-border hover:bg-slate-100 dark:hover:bg-brand-cardHover flex items-center gap-1.5 transition bg-transparent cursor-pointer">
               <i className="ph ph-arrow-counter-clockwise"></i> Reset Defaults
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Sliders Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {/* Number of Labs */}
             <div className="space-y-2">
               <div className="flex justify-between text-xs">
-                <span className="font-medium text-slate-600 dark:text-slate-300">High-Power Academic Labs</span>
+                <span className="font-medium text-slate-600 dark:text-slate-300">Active Labs on Campus</span>
                 <span className="font-mono font-bold text-slate-900 dark:text-white bg-slate-200 dark:bg-slate-800 px-2 py-0.5 rounded">{labs} Labs</span>
               </div>
               <input type="range" min="5" max="60" value={labs} onChange={(e) => setLabs(Number(e.target.value))} className="w-full" />
               <div className="flex justify-between text-[10px] text-slate-500 font-mono">
-                <span>5 Labs (Eco)</span>
-                <span>60 Labs (Max)</span>
+                <span>5 Labs</span>
+                <span>60 Labs</span>
               </div>
             </div>
 
+            {/* Computers Per Lab */}
             <div className="space-y-2">
               <div className="flex justify-between text-xs">
-                <span className="font-medium text-slate-600 dark:text-slate-300">HVAC Operation Duration</span>
-                <span className="font-mono font-bold text-slate-900 dark:text-white bg-slate-200 dark:bg-slate-800 px-2 py-0.5 rounded">{hvac} Hours/day</span>
+                <span className="font-medium text-slate-600 dark:text-slate-300">Computers Per Lab</span>
+                <span className="font-mono font-bold text-slate-900 dark:text-white bg-slate-200 dark:bg-slate-800 px-2 py-0.5 rounded">{pcsPerLab} PCs</span>
+              </div>
+              <input type="range" min="10" max="60" value={pcsPerLab} onChange={(e) => setPcsPerLab(Number(e.target.value))} className="w-full" />
+              <div className="flex justify-between text-[10px] text-slate-500 font-mono">
+                <span>10 PCs (Small)</span>
+                <span>60 PCs (Large)</span>
+              </div>
+            </div>
+
+            {/* ACs Per Lab */}
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs">
+                <span className="font-medium text-slate-600 dark:text-slate-300">ACs Per Lab (1.5 Ton)</span>
+                <span className="font-mono font-bold text-slate-900 dark:text-white bg-slate-200 dark:bg-slate-800 px-2 py-0.5 rounded">{acsPerLab} ACs</span>
+              </div>
+              <input type="range" min="0" max="6" value={acsPerLab} onChange={(e) => setAcsPerLab(Number(e.target.value))} className="w-full" />
+              <div className="flex justify-between text-[10px] text-slate-500 font-mono">
+                <span>0 (No AC)</span>
+                <span>6 ACs</span>
+              </div>
+            </div>
+
+            {/* Lab Operating Hours */}
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs">
+                <span className="font-medium text-slate-600 dark:text-slate-300">Lab Operating Hours / Day</span>
+                <span className="font-mono font-bold text-slate-900 dark:text-white bg-slate-200 dark:bg-slate-800 px-2 py-0.5 rounded">{labHours} Hrs</span>
+              </div>
+              <input type="range" min="2" max="16" value={labHours} onChange={(e) => setLabHours(Number(e.target.value))} className="w-full" />
+              <div className="flex justify-between text-[10px] text-slate-500 font-mono">
+                <span>2 Hrs (Minimal)</span>
+                <span>16 Hrs (Extended)</span>
+              </div>
+            </div>
+
+            {/* HVAC Hours */}
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs">
+                <span className="font-medium text-slate-600 dark:text-slate-300">Central HVAC Duration</span>
+                <span className="font-mono font-bold text-slate-900 dark:text-white bg-slate-200 dark:bg-slate-800 px-2 py-0.5 rounded">{hvac} Hrs/day</span>
               </div>
               <input type="range" min="2" max="16" value={hvac} onChange={(e) => setHvac(Number(e.target.value))} className="w-full" />
               <div className="flex justify-between text-[10px] text-slate-500 font-mono">
@@ -718,6 +865,7 @@ export default function Dashboard() {
               </div>
             </div>
 
+            {/* EV Fleet Share */}
             <div className="space-y-2">
               <div className="flex justify-between text-xs">
                 <span className="font-medium text-slate-600 dark:text-slate-300">Transit Fleet EV / CNG Share</span>
@@ -727,6 +875,64 @@ export default function Dashboard() {
               <div className="flex justify-between text-[10px] text-slate-500 font-mono">
                 <span>0% Diesel Only</span>
                 <span>100% Fully Electric</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Equipment Breakdown Card */}
+          <div className="mt-6 pt-5 border-t border-slate-200 dark:border-brand-border">
+            <div className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-3">Per-Lab Power Breakdown (Real Equipment)</div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Left: Equipment table */}
+              <div className="bg-slate-50 dark:bg-[#1a1c22] rounded-xl p-4 border border-slate-200 dark:border-brand-border">
+                <div className="space-y-2">
+                  {[
+                    { icon: 'ph-desktop', label: `${pcsPerLab} Desktops (300W each)`, kw: pcsPerLab * 0.30 },
+                    { icon: 'ph-monitor', label: `${pcsPerLab} Monitors (50W each)`, kw: pcsPerLab * 0.05 },
+                    { icon: 'ph-thermometer-cold', label: `${acsPerLab} ACs 1.5T (1500W each)`, kw: acsPerLab * 1.50 },
+                    { icon: 'ph-lamp', label: 'Lighting (per lab)', kw: 0.20 },
+                    { icon: 'ph-projector-screen', label: 'Projector', kw: 0.30 },
+                  ].map((item) => (
+                    <div key={item.label} className="flex items-center justify-between text-xs">
+                      <span className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+                        <i className={`ph ${item.icon} text-sm text-slate-400`}></i>
+                        {item.label}
+                      </span>
+                      <span className="font-mono font-semibold text-slate-900 dark:text-white">{item.kw.toFixed(1)} kW</span>
+                    </div>
+                  ))}
+                  <div className="pt-2 mt-2 border-t border-slate-200 dark:border-brand-border flex justify-between text-xs font-bold">
+                    <span className="text-slate-900 dark:text-white">Total Per Lab</span>
+                    <span className="text-brand-orange font-mono">{labKW.toFixed(1)} kW</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right: Calculation chain */}
+              <div className="bg-slate-50 dark:bg-[#1a1c22] rounded-xl p-4 border border-slate-200 dark:border-brand-border">
+                <div className="space-y-2.5">
+                  {[
+                    { label: 'Power per lab', value: `${labKW.toFixed(1)} kW`, sub: `${pcsPerLab} PCs + ${acsPerLab} ACs + lights + projector` },
+                    { label: `Daily kWh (${labHours} hrs)`, value: `${labDailyKWh.toFixed(1)} kWh`, sub: `${labKW.toFixed(1)} kW x ${labHours} hrs` },
+                    { label: 'Daily CO2 per lab', value: `${(labDailyCO2 * 1000).toFixed(1)} kg`, sub: `${labDailyKWh.toFixed(1)} kWh x 0.716 kg/kWh` },
+                    { label: 'Annual CO2 per lab', value: `${labAnnualCO2.toFixed(2)} T`, sub: `x 250 working days` },
+                    { label: `Total (${labs} labs)`, value: `${(labs * labAnnualCO2).toFixed(1)} T/yr`, sub: `${labs} labs x ${labAnnualCO2.toFixed(2)} T` },
+                  ].map((row) => (
+                    <div key={row.label} className="flex items-start justify-between text-xs">
+                      <div>
+                        <span className="font-medium text-slate-700 dark:text-slate-200">{row.label}</span>
+                        <div className="text-[10px] text-slate-400 font-mono">{row.sub}</div>
+                      </div>
+                      <span className="font-mono font-bold text-slate-900 dark:text-white whitespace-nowrap">{row.value}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-3 pt-3 border-t border-slate-200 dark:border-brand-border flex justify-between text-xs">
+                  <span className="font-bold text-slate-900 dark:text-white">Net Footprint Change</span>
+                  <span className={`font-mono font-bold ${yearlyDelta > 0 ? 'text-rose-500' : yearlyDelta < 0 ? 'text-emerald-500' : 'text-slate-500'}`}>
+                    {yearlyDelta > 0 ? '+' : ''}{yearlyDelta.toFixed(1)} T/yr
+                  </span>
+                </div>
               </div>
             </div>
           </div>
