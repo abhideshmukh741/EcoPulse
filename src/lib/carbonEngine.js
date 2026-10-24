@@ -185,7 +185,7 @@ export function getStoredDailyActuals() {
     const raw = localStorage.getItem("ecopulse_daily_records");
     if (raw) return JSON.parse(raw);
   } catch (e) {}
-  return getSeedDailyRecords();
+  return [];
 }
 
 export async function storeDailyEmissionRecord(dateStr, actualData, predictedData, operationalInputs) {
@@ -246,44 +246,6 @@ export async function storeDailyEmissionRecord(dateStr, actualData, predictedDat
 
   window.dispatchEvent(new CustomEvent("ecopulse_data_updated", { detail: { type: "daily_actual_stored", record: newRecord } }));
   return newRecord;
-}
-
-function getSeedDailyRecords() {
-  const today = new Date();
-  const seed = [];
-  const base = [
-    { offset: -6, pred: 7.42, act: 7.31, temp: 33.2, footfall: 4210, phase: "regular", compute: "medium" },
-    { offset: -5, pred: 7.55, act: 7.62, temp: 34.0, footfall: 4350, phase: "regular", compute: "high" },
-    { offset: -4, pred: 7.28, act: 7.15, temp: 31.8, footfall: 4120, phase: "regular", compute: "medium" },
-    { offset: -3, pred: 7.80, act: 8.12, temp: 36.5, footfall: 4480, phase: "regular", compute: "high" },
-    { offset: -2, pred: 3.65, act: 3.52, temp: 32.0, footfall: 1280, phase: "regular", compute: "low" },
-    { offset: -1, pred: 3.82, act: 3.76, temp: 32.5, footfall: 1390, phase: "regular", compute: "low" },
-    { offset: 0,  pred: 7.35, act: 7.48, temp: 33.8, footfall: 4290, phase: "regular", compute: "medium" },
-  ];
-  for (const b of base) {
-    const d = new Date(today);
-    d.setDate(today.getDate() + b.offset);
-    const dateStr = d.toISOString().split("T")[0];
-    const diff = Number((b.act - b.pred).toFixed(3));
-    const pct = Number(((diff / b.pred) * 100).toFixed(2));
-    seed.push({
-      date: dateStr,
-      actual_tons: b.act,
-      predicted_tons: b.pred,
-      variance_tons: diff,
-      variance_pct: pct,
-      status: Math.abs(pct) <= 5 ? "Optimal" : pct < -5 ? "Carbon Saved" : pct <= 15 ? "Moderate Variance" : "High Emission Spike",
-      scope1_actual: Number((b.act * 0.11).toFixed(3)),
-      scope2_actual: Number((b.act * 0.42).toFixed(3)),
-      scope3_actual: Number((b.act * 0.47).toFixed(3)),
-      academic_phase: b.phase,
-      student_footfall: b.footfall,
-      ambient_temp: b.temp,
-      lab_compute_load: b.compute,
-      solar_kwp: 200,
-    });
-  }
-  return seed;
 }
 
 // ── Step 4: Predict Next 30 Days (Starting Tomorrow) ─────────────────────────

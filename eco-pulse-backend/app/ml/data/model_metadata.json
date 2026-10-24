@@ -1,0 +1,19 @@
+{
+  "status": "trained",
+  "model_type": "RandomForestRegressor (Multi-Output)",
+  "trained_at": "2026-10-24T23:43:44.122690",
+  "total_samples": 3652,
+  "base_dataset_samples": 3652,
+  "newly_incorporated_actuals": 0,
+  "r2_score": 0.9839,
+  "mae_tons": 0.2994,
+  "rmse_tons": 0.3762,
+  "confidence_pct": 98.4,
+  "feature_importances": {
+    "academic_phase": 0.0702,
+    "student_footfall": 0.8914,
+    "ambient_temp": 0.0252,
+    "lab_compute_load": 0.0055,
+    "solar_kwp": 0.0077
+  }
+}
