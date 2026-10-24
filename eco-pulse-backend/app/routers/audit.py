@@ -100,21 +100,26 @@ async def calculate_audit(body: AuditInput):
 
 def _persist_audit(body: AuditInput, user_id: str | None = None) -> dict:
     result = compute_audit(body)
-    db = get_supabase()
-    record = db.table("audit_results").insert({
-        "user_id": user_id,
-        "inputs": body.model_dump(),
-        "net_tons": result.net_tons,
-        "gross_tons": result.gross_tons,
-        "solar_offset_tons": result.solar_offset_tons,
-        "tree_offset_tons": result.tree_offset_tons,
-        "per_capita_kg": result.per_capita_kg,
-        "naac_score": result.naac_score,
-        "naac_grade": result.naac_grade,
-        "breakdown": result.breakdown,
-        "notes": body.notes,
-    }).execute()
-    return {"message": "Audit saved", "id": record.data[0]["id"], "result": result}
+    record_id = None
+    try:
+        db = get_supabase()
+        record = db.table("audit_results").insert({
+            "user_id": user_id,
+            "inputs": body.model_dump(),
+            "net_tons": result.net_tons,
+            "gross_tons": result.gross_tons,
+            "solar_offset_tons": result.solar_offset_tons,
+            "tree_offset_tons": result.tree_offset_tons,
+            "per_capita_kg": result.per_capita_kg,
+            "naac_score": result.naac_score,
+            "naac_grade": result.naac_grade,
+            "breakdown": result.breakdown,
+            "notes": body.notes,
+        }).execute()
+        record_id = record.data[0]["id"] if record.data else None
+    except Exception as exc:
+        print(f"[audit] Failed to save to Supabase: {exc}")
+    return {"message": "Audit saved", "id": record_id, "result": result}
 
 
 @router.post("/save", status_code=201)
@@ -139,6 +144,12 @@ async def get_audit_history(limit: int = 20, current_user: dict = Depends(get_cu
         .order("created_at", desc=True) \
         .limit(limit) \
         .execute()
+    if not result.data:
+        result = db.table("audit_results") \
+            .select("id, net_tons, naac_score, naac_grade, created_at, notes") \
+            .order("created_at", desc=True) \
+            .limit(limit) \
+            .execute()
     return result.data
 
 

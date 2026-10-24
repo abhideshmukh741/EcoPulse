@@ -300,7 +300,7 @@ export default function Home() {
               <h2 className="text-2xl font-bold text-[#0F172A] dark:text-white mb-8">Explore EcoPulse</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {[
-                  { to: "/calculator", title: "Audit", desc: "Calculate Campus Emissions" },
+                  { to: "/audit", title: "Audit", desc: "Calculate Campus Emissions" },
                   { to: "/dashboard", title: "Dashboard", desc: "Explore Campus Analytics" },
                   { to: "/predictions", title: "Predictions", desc: "Forecast Future Emissions" },
                   { to: "/settings", title: "Settings", desc: "Manage Campus Data" }

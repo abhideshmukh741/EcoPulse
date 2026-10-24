@@ -9,19 +9,31 @@ async def get_summary(current_user: dict = Depends(get_current_user)):
     """Top-level KPI cards for the dashboard."""
     db = get_supabase()
 
-    # Latest audit
+    # Latest audit (prefer user-owned, fallback to campus-wide)
     audit = db.table("audit_results") \
         .select("net_tons, naac_score, naac_grade, created_at") \
         .eq("user_id", current_user["sub"]) \
         .order("created_at", desc=True) \
         .limit(1).execute()
 
-    # Latest prediction
+    if not audit.data:
+        audit = db.table("audit_results") \
+            .select("net_tons, naac_score, naac_grade, created_at") \
+            .order("created_at", desc=True) \
+            .limit(1).execute()
+
+    # Latest prediction (prefer user-owned, fallback to campus-wide)
     pred = db.table("predictions") \
         .select("daily_tons_co2e, monthly_estimate, peak_risk, created_at") \
         .eq("user_id", current_user["sub"]) \
         .order("created_at", desc=True) \
         .limit(1).execute()
+
+    if not pred.data:
+        pred = db.table("predictions") \
+            .select("daily_tons_co2e, monthly_estimate, peak_risk, created_at") \
+            .order("created_at", desc=True) \
+            .limit(1).execute()
 
     latest_audit = audit.data[0] if audit.data else None
     latest_pred = pred.data[0] if pred.data else None
@@ -49,6 +61,13 @@ async def get_emission_trends(months: int = 12, current_user: dict = Depends(get
         .eq("user_id", current_user["sub"]) \
         .order("created_at", desc=True) \
         .limit(months).execute()
+
+    if not result.data:
+        result = db.table("audit_results") \
+            .select("net_tons, created_at") \
+            .order("created_at", desc=True) \
+            .limit(months).execute()
+
     return result.data
 
 
@@ -61,6 +80,12 @@ async def get_breakdown(current_user: dict = Depends(get_current_user)):
         .eq("user_id", current_user["sub"]) \
         .order("created_at", desc=True) \
         .limit(1).execute()
+
+    if not result.data:
+        result = db.table("audit_results") \
+            .select("breakdown, created_at") \
+            .order("created_at", desc=True) \
+            .limit(1).execute()
 
     if not result.data:
         return {"breakdown": None, "message": "No audits saved yet"}

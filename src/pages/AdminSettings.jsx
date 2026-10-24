@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Download, Save } from "lucide-react";
+import { Download, Save, FileText } from "lucide-react";
+import { apiFetch } from "../lib/api";
 
 const ToggleSwitch = ({ isOn, handleToggle }) => {
   return (
@@ -20,6 +21,31 @@ export default function AdminSettings() {
   const [totalStudents, setTotalStudents] = useState("4180");
   const [naacAccreditation, setNaacAccreditation] = useState("NAAC 'A' Grade + Autonomous");
   const [saveToast, setSaveToast] = useState(false);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+  const [downloadError, setDownloadError] = useState("");
+
+  const handleDownloadPdf = async () => {
+    setIsDownloadingPdf(true);
+    setDownloadError("");
+    try {
+      const res = await apiFetch("/api/reports/audit/latest/pdf");
+      if (!res.ok) {
+        setDownloadError("Please run and save a campus audit first before exporting the PDF.");
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `ecopulse_campus_audit_${Date.now()}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      setDownloadError("Backend unreachable. Ensure the EcoPulse API server is running on port 8000.");
+    } finally {
+      setIsDownloadingPdf(false);
+    }
+  };
 
   const [departmentCaps, setDepartmentCaps] = useState(() => {
     try {
@@ -204,7 +230,16 @@ export default function AdminSettings() {
                 Export authenticated institutional carbon data package for accreditation inspectors and environmental compliance officers.
               </p>
               <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  type="button"
+                  disabled={isDownloadingPdf}
+                  onClick={handleDownloadPdf}
+                  className="flex-1 bg-[#0F172A] hover:bg-[#1E293B] dark:bg-[#1E2025] dark:hover:bg-[#2A2C34] text-white py-2.5 rounded-md flex items-center justify-center gap-2 font-semibold transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  <FileText size={18} /> {isDownloadingPdf ? "Generating PDF..." : "Export Official PDF"}
+                </button>
                 <button 
+                  type="button"
                   onClick={() => {
                     const auditStr = localStorage.getItem("ecopulse_latest_audit");
                     const auditData = auditStr ? JSON.parse(auditStr) : {};
@@ -232,6 +267,9 @@ export default function AdminSettings() {
                   <Download size={18} /> Export NAAC Audit JSON
                 </button>
               </div>
+              {downloadError && (
+                <p className="text-xs text-rose-500 font-medium mt-2">{downloadError}</p>
+              )}
             </div>
 
           </div>

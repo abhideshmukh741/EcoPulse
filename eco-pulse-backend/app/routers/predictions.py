@@ -84,17 +84,22 @@ async def run_prediction(body: PredictionInput):
 async def predict_and_save(body: PredictionInput, current_user: dict = Depends(get_current_user)):
     """Run AI model + save result for authenticated user."""
     result = _run_model(body)
-    db = get_supabase()
-    record = db.table("predictions").insert({
-        "user_id": current_user["sub"],
-        "inputs":  body.model_dump(exclude_none=True),
-        "daily_tons_co2e": result["daily_tons_co2e"],
-        "monthly_estimate": result["monthly_estimate"],
-        "confidence": result["confidence"],
-        "peak_risk": result["peak_risk"],
-        "cost_estimate_lakhs": result["cost_estimate_lakhs"],
-    }).execute()
-    return {"message": "Prediction saved", "id": record.data[0]["id"], "prediction": result}
+    record_id = None
+    try:
+        db = get_supabase()
+        record = db.table("predictions").insert({
+            "user_id": current_user["sub"],
+            "inputs":  body.model_dump(exclude_none=True),
+            "daily_tons_co2e": result["daily_tons_co2e"],
+            "monthly_estimate": result["monthly_estimate"],
+            "confidence": result["confidence"],
+            "peak_risk": result["peak_risk"],
+            "cost_estimate_lakhs": result["cost_estimate_lakhs"],
+        }).execute()
+        record_id = record.data[0]["id"] if record.data else None
+    except Exception as exc:
+        print(f"[predictions] Failed to save to Supabase: {exc}")
+    return {"message": "Prediction saved", "id": record_id, "prediction": result}
 
 
 @router.get("/history")
@@ -107,4 +112,10 @@ async def prediction_history(limit: int = 20, current_user: dict = Depends(get_c
         .order("created_at", desc=True) \
         .limit(limit) \
         .execute()
+    if not result.data:
+        result = db.table("predictions") \
+            .select("id, daily_tons_co2e, monthly_estimate, peak_risk, confidence, created_at") \
+            .order("created_at", desc=True) \
+            .limit(limit) \
+            .execute()
     return result.data
