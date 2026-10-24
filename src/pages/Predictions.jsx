@@ -36,6 +36,7 @@ import {
   fetch30DayForecast,
   fetchComparisonData,
   fetchAiRecommendations,
+  calculateActualEmissionsLocal,
   DEFAULT_TELEMETRY,
 } from "../lib/carbonEngine";
 
