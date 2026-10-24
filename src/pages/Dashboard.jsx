@@ -481,7 +481,7 @@ export default function Dashboard() {
 
         {/* ── TODAY'S CARBON PULSE: ACTUAL VS PREDICTED EMISSIONS ── */}
         <ScrollReveal variant="fadeUp" duration={0.5}>
-          <div className="bg-gradient-to-r from-slate-900 via-slate-900 to-slate-950 text-white rounded-3xl p-5 sm:p-7 border border-emerald-500/30 shadow-xl relative overflow-hidden backdrop-blur-xl">
+          <div className="dark-preserve telemetry-dark-card bg-gradient-to-r from-slate-900 via-slate-900 to-slate-950 text-white rounded-3xl p-5 sm:p-7 border border-emerald-500/30 shadow-xl relative overflow-hidden backdrop-blur-xl">
             <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
             <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-white/10">

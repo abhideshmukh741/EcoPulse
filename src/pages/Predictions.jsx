@@ -1106,7 +1106,7 @@ export default function Predictions() {
         {/* ── STEP 6: AI CARBON REDUCTION AGENT ─────────────────────────────── */}
         {(activeTab === "all" || activeTab === "agent") && (
           <ScrollReveal variant="fadeUp" delay={0.3} duration={0.5}>
-            <div className="bg-gradient-to-br from-slate-900 to-slate-950 text-white rounded-3xl p-6 sm:p-8 border border-emerald-500/30 shadow-2xl relative overflow-hidden">
+            <div className="dark-preserve ai-agent-panel bg-gradient-to-br from-slate-900 to-slate-950 text-white rounded-3xl p-6 sm:p-8 border border-emerald-500/30 shadow-2xl relative overflow-hidden">
               <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
               
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-white/10 relative z-10">
