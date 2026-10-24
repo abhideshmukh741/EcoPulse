@@ -25,6 +25,7 @@ lerna-debug.log*
 
 # AI/Agent files
 .agents/
+.agent/
 
 # Python
 __pycache__/

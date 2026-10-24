@@ -1,3 +1,4 @@
+from typing import Optional, Dict, Any
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 from app.ml.model import predict_emissions
@@ -9,36 +10,32 @@ router = APIRouter(prefix="/api/predictions", tags=["Predictions"])
 # ── Schemas ───────────────────────────────────────────────────────────────────
 
 class PredictionInput(BaseModel):
-    # Campus context
-    academic_phase:    str   = Field("regular", description="vacation | regular | exams | fest")
-    student_footfall:  int   = Field(4180,       description="Students on campus that day")
-    ambient_temp:      float = Field(32.0,       description="Ambient temperature (°C)")
-    lab_compute_load:  str   = Field("medium",   description="low | medium | high")
+    # Core campus scenario variables
+    academic_phase:        str             = Field("regular", description="vacation | regular | exams | fest")
+    student_footfall:      int             = Field(4180,       description="Students on campus that day (800-8000)")
+    ambient_temp:          float           = Field(32.0,       description="Ambient temperature (°C)")
+    lab_compute_load:      str             = Field("medium",   description="low | medium | high")
+    solar_kwp:             float           = Field(200.0,      description="Installed solar capacity (kWp)")
 
-    # Energy
-    solar_kwp:             float = Field(200.0,   description="Installed solar capacity (kWp)")
-    grid_daily_kwh:        float = Field(5000.0,  description="Grid electricity drawn (kWh/day)")
-    solar_generation_kwh:  float = Field(350.0,   description="Actual solar generation (kWh/day)")
+    # Optional activity telemetry (for granular reporting or custom override)
+    grid_daily_kwh:        Optional[float] = Field(None,       description="Grid electricity drawn (kWh/day)")
+    solar_generation_kwh:  Optional[float] = Field(None,       description="Actual solar generation (kWh/day)")
+    diesel_liters:         Optional[float] = Field(None,       description="Diesel consumed (litres/day)")
+    petrol_liters:         Optional[float] = Field(None,       description="Petrol consumed (litres/day)")
+    transport_km:          Optional[float] = Field(None,       description="Total vehicle km driven (km/day)")
+    water_liters:          Optional[int]   = Field(None,       description="Water consumed (litres/day)")
+    waste_kg:              Optional[float] = Field(None,       description="Waste generated (kg/day)")
+    food_meals:            Optional[int]   = Field(None,       description="Meals served on campus")
 
-    # Fuel & transport
-    diesel_liters:  float = Field(150.0,   description="Diesel consumed (litres/day)")
-    petrol_liters:  float = Field(80.0,    description="Petrol consumed (litres/day)")
-    transport_km:   float = Field(2000.0,  description="Total vehicle km driven (km/day)")
+    # Optional scope emissions (pre-calculated)
+    scope1_tco2e:          Optional[float] = Field(None,       description="Direct emissions (tCO2e/day)")
+    scope2_tco2e:          Optional[float] = Field(None,       description="Electricity emissions (tCO2e/day)")
+    scope3_tco2e:          Optional[float] = Field(None,       description="Indirect emissions (tCO2e/day)")
 
-    # Resources
-    water_liters:  int   = Field(30000, description="Water consumed (litres/day)")
-    waste_kg:      float = Field(200.0, description="Waste generated (kg/day)")
-    food_meals:    int   = Field(2000,  description="Meals served on campus")
-
-    # Scope emissions (pre-calculated, optional enrichment)
-    scope1_tco2e:  float = Field(0.7,  description="Direct emissions (tCO2e/day)")
-    scope2_tco2e:  float = Field(3.0,  description="Electricity emissions (tCO2e/day)")
-    scope3_tco2e:  float = Field(2.0,  description="Indirect emissions (tCO2e/day)")
-
-    # Lag features — previous observed values
-    lag_1_co2e:   float = Field(5.0,  description="Yesterday's total emission (tCO2e)")
-    lag_7_co2e:   float = Field(4.8,  description="7-day rolling avg emission (tCO2e)")
-    lag_30_co2e:  float = Field(4.5,  description="30-day rolling avg emission (tCO2e)")
+    # Lag features
+    lag_1_co2e:           Optional[float] = Field(None,       description="Yesterday's total emission (tCO2e)")
+    lag_7_co2e:           Optional[float] = Field(None,       description="7-day rolling avg emission (tCO2e)")
+    lag_30_co2e:          Optional[float] = Field(None,       description="30-day rolling avg emission (tCO2e)")
 
 
 class PredictionResponse(BaseModel):
@@ -47,32 +44,14 @@ class PredictionResponse(BaseModel):
     confidence:          float
     peak_risk:           str
     cost_estimate_lakhs: float
+    breakdown:           Optional[Dict[str, float]] = None
 
 
 # ── Helper ────────────────────────────────────────────────────────────────────
 
 def _run_model(body: PredictionInput) -> dict:
-    return predict_emissions(
-        academic_phase=body.academic_phase,
-        student_footfall=body.student_footfall,
-        ambient_temp=body.ambient_temp,
-        lab_compute_load=body.lab_compute_load,
-        solar_kwp=body.solar_kwp,
-        grid_daily_kwh=body.grid_daily_kwh,
-        solar_generation_kwh=body.solar_generation_kwh,
-        diesel_liters=body.diesel_liters,
-        petrol_liters=body.petrol_liters,
-        transport_km=body.transport_km,
-        water_liters=body.water_liters,
-        waste_kg=body.waste_kg,
-        food_meals=body.food_meals,
-        scope1_tco2e=body.scope1_tco2e,
-        scope2_tco2e=body.scope2_tco2e,
-        scope3_tco2e=body.scope3_tco2e,
-        lag_1_co2e=body.lag_1_co2e,
-        lag_7_co2e=body.lag_7_co2e,
-        lag_30_co2e=body.lag_30_co2e,
-    )
+    kwargs = body.model_dump(exclude_none=True)
+    return predict_emissions(**kwargs)
 
 
 # ── Routes ────────────────────────────────────────────────────────────────────
@@ -87,8 +66,12 @@ async def run_prediction(body: PredictionInput):
         db = get_supabase()
         record = db.table("predictions").insert({
             "user_id": None,
-            "inputs": body.model_dump(),
-            **result,
+            "inputs": body.model_dump(exclude_none=True),
+            "daily_tons_co2e": result["daily_tons_co2e"],
+            "monthly_estimate": result["monthly_estimate"],
+            "confidence": result["confidence"],
+            "peak_risk": result["peak_risk"],
+            "cost_estimate_lakhs": result["cost_estimate_lakhs"],
         }).execute()
         saved = True
         record_id = record.data[0]["id"] if record.data else None
@@ -104,8 +87,12 @@ async def predict_and_save(body: PredictionInput, current_user: dict = Depends(g
     db = get_supabase()
     record = db.table("predictions").insert({
         "user_id": current_user["sub"],
-        "inputs":  body.model_dump(),
-        **result,
+        "inputs":  body.model_dump(exclude_none=True),
+        "daily_tons_co2e": result["daily_tons_co2e"],
+        "monthly_estimate": result["monthly_estimate"],
+        "confidence": result["confidence"],
+        "peak_risk": result["peak_risk"],
+        "cost_estimate_lakhs": result["cost_estimate_lakhs"],
     }).execute()
     return {"message": "Prediction saved", "id": record.data[0]["id"], "prediction": result}
 
@@ -121,4 +108,3 @@ async def prediction_history(limit: int = 20, current_user: dict = Depends(get_c
         .limit(limit) \
         .execute()
     return result.data
-
