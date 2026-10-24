@@ -2,6 +2,31 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import ScrollReveal from "../components/ScrollReveal";
 import "./Dashboard.css";
+import {
+  getTodayActualEmissions,
+  storeDailyEmissionRecord,
+  fetch30DayForecast,
+  fetchAiRecommendations,
+  calculateActualEmissionsLocal,
+} from "../lib/carbonEngine";
+import {
+  BrainCircuit,
+  Activity,
+  Calendar,
+  Sparkles,
+  TrendingUp,
+  TrendingDown,
+  CheckCircle2,
+  AlertTriangle,
+  Sliders,
+  Save,
+  ArrowRight,
+  Bot,
+  Zap,
+  Info,
+  X,
+  RefreshCw,
+} from "lucide-react";
 
 const chartPaths = {
   '1D': {
@@ -94,6 +119,43 @@ export default function Dashboard() {
     sourceTag: "10-Year Dataset Baseline"
   });
 
+  // ── Today's Live Actual & ML Prediction States ──────────────────────────────
+  const [todayActual, setTodayActual] = useState({
+    daily_tons_co2e: 7.48,
+    scope1_tco2e: 0.85,
+    scope2_tco2e: 3.22,
+    scope3_tco2e: 3.41,
+    solar_offset_tco2e: 0.24,
+  });
+  const [todayPrediction, setTodayPrediction] = useState({
+    dailyTons: 7.35,
+    monthlyTons: 220.5,
+    confidence: 98.4,
+    peakRisk: "MODERATE",
+    breakdown: { scope1_tco2e: 0.81, scope2_tco2e: 3.23, scope3_tco2e: 3.31 },
+  });
+  const [todayInputs, setTodayInputs] = useState({
+    gridDailyKwh: 4350,
+    solarGenerationKwh: 340,
+    dieselLiters: 175,
+    studentFootfall: 4180,
+    ambientTemp: 32.0,
+    academicPhase: "regular",
+  });
+  const [forecast30Summary, setForecast30Summary] = useState({
+    total_predicted_tons: 214.2,
+    average_daily_tons: 7.14,
+    peak_day: { date: "Day +15", tons: 8.32, day_name: "Wed" },
+  });
+  const [aiTip, setAiTip] = useState({
+    title: "Dynamic Pre-Cooling & Chilled Water Reset",
+    saving: "0.62 T/day",
+    rupees: "₹48,500/mo",
+    text: "Scope 2 grid electricity peaks during afternoon heatwaves. Pre-cooling academic halls before 09:00 shaves 0.62 T/day off peak tariff demand.",
+  });
+  const [telemetryModalOpen, setTelemetryModalOpen] = useState(false);
+  const [isSavingDaily, setIsSavingDaily] = useState(false);
+
   const showToast = (msg) => {
     setToastMsg(msg);
     setToastVisible(true);
@@ -145,11 +207,70 @@ export default function Dashboard() {
       if (predStr) {
         const pred = JSON.parse(predStr);
         if (pred.monthlyTons) updated.monthlyPrediction = pred.monthlyTons;
+        if (pred.dailyTons) {
+          setTodayPrediction((prev) => ({
+            ...prev,
+            dailyTons: pred.dailyTons,
+            monthlyTons: pred.monthlyTons || prev.monthlyTons,
+            confidence: pred.confidence || prev.confidence,
+          }));
+        }
         if (!auditStr) updated.sourceTag = "AI Forecast Available (run audit to set footprint)";
       }
 
+      // Load stored today's actuals from localStorage or calculate
+      try {
+        const storedToday = localStorage.getItem("ecopulse_latest_today_actual");
+        if (storedToday) {
+          setTodayActual(JSON.parse(storedToday));
+        } else {
+          getTodayActualEmissions().then(setTodayActual).catch(() => {});
+        }
+      } catch (e) {}
+
+      fetch30DayForecast().then((f) => {
+        if (f) setForecast30Summary(f);
+      }).catch(() => {});
+
+      fetchAiRecommendations().then((ai) => {
+        if (ai?.suggestions?.[0]) {
+          const s = ai.suggestions[0];
+          setAiTip({
+            title: s.title,
+            saving: `${Math.abs(s.impact_daily_tco2e)} T/day`,
+            rupees: `₹${s.cost_saving_monthly_inr.toLocaleString()}/mo`,
+            text: s.root_cause_analysis,
+          });
+        }
+      }).catch(() => {});
+
       setTelemetry(updated);
     } catch (e) {}
+  };
+
+  const handleSaveTodayActual = async () => {
+    setIsSavingDaily(true);
+    try {
+      await storeDailyEmissionRecord(
+        new Date().toISOString().split("T")[0],
+        todayActual,
+        todayPrediction,
+        todayInputs
+      );
+      showToast("✓ Today's actual carbon emissions stored! Model dataset updated for future improvement.");
+      setTelemetryModalOpen(false);
+    } catch (err) {
+      showToast("Error saving daily actuals: " + err.message);
+    } finally {
+      setIsSavingDaily(false);
+    }
+  };
+
+  const handleUpdateTodayInputs = (field, value) => {
+    const updated = { ...todayInputs, [field]: value };
+    setTodayInputs(updated);
+    const newAct = calculateActualEmissionsLocal(updated);
+    setTodayActual(newAct);
   };
 
   useEffect(() => {
@@ -356,6 +477,158 @@ export default function Dashboard() {
             </button>
           </div>
         </div>
+        </ScrollReveal>
+
+        {/* ── TODAY'S CARBON PULSE: ACTUAL VS PREDICTED EMISSIONS ── */}
+        <ScrollReveal variant="fadeUp" duration={0.5}>
+          <div className="bg-gradient-to-r from-slate-900 via-slate-900 to-slate-950 text-white rounded-3xl p-5 sm:p-7 border border-emerald-500/30 shadow-xl relative overflow-hidden backdrop-blur-xl">
+            <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+
+            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-white/10">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                  <Activity size={20} className="animate-pulse" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                      Live Telemetry &amp; Machine Learning
+                    </span>
+                    <span className="text-xs text-slate-400 font-mono">Today: {new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+                  </div>
+                  <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight mt-0.5">
+                    Today's Carbon Emissions: Actual vs Predicted
+                  </h2>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2.5">
+                <button
+                  onClick={() => setTelemetryModalOpen(true)}
+                  className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white font-semibold text-xs flex items-center gap-1.5 transition border border-white/10 cursor-pointer"
+                >
+                  <Sliders size={13} />
+                  <span>Log Telemetry</span>
+                </button>
+                <button
+                  onClick={handleSaveTodayActual}
+                  disabled={isSavingDaily}
+                  className="px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs flex items-center gap-1.5 transition shadow-lg shadow-emerald-500/25 cursor-pointer disabled:opacity-60"
+                >
+                  <Save size={13} />
+                  <span>{isSavingDaily ? "Storing..." : "Store Today's Actual"}</span>
+                </button>
+                <button
+                  onClick={() => navigate('/predictions')}
+                  className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-400 font-semibold text-xs flex items-center gap-1.5 transition border border-emerald-500/30 cursor-pointer"
+                >
+                  <span>30-Day Forecast &amp; AI Studio</span>
+                  <ArrowRight size={13} />
+                </button>
+              </div>
+            </div>
+
+            {/* Core Side-by-Side Today Metrics */}
+            <div className="relative z-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-5">
+              {/* Today's Actual */}
+              <div className="p-4 rounded-2xl bg-white/5 border border-amber-500/30">
+                <div className="flex items-center justify-between text-xs font-mono text-amber-400 mb-1">
+                  <span className="uppercase font-bold">Today's Actual</span>
+                  <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-500/20">Operational</span>
+                </div>
+                <div className="text-3xl font-black text-white font-mono mt-1">
+                  {todayActual.daily_tons_co2e} <span className="text-sm font-normal text-slate-400">tCO₂e</span>
+                </div>
+                <div className="mt-2.5 text-[11px] text-slate-400 font-mono space-y-0.5">
+                  <div className="flex justify-between"><span>Scope 1 (Fuel):</span> <span className="text-white">{todayActual.scope1_tco2e} T</span></div>
+                  <div className="flex justify-between"><span>Scope 2 (Net Grid):</span> <span className="text-white">{todayActual.scope2_tco2e} T</span></div>
+                  <div className="flex justify-between"><span>Scope 3 (Commute/Mess):</span> <span className="text-white">{todayActual.scope3_tco2e} T</span></div>
+                </div>
+              </div>
+
+              {/* Today's Predicted */}
+              <div className="p-4 rounded-2xl bg-white/5 border border-emerald-500/30">
+                <div className="flex items-center justify-between text-xs font-mono text-emerald-400 mb-1">
+                  <span className="uppercase font-bold">Today's Predicted</span>
+                  <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/20">ML Model</span>
+                </div>
+                <div className="text-3xl font-black text-white font-mono mt-1">
+                  {todayPrediction.dailyTons} <span className="text-sm font-normal text-slate-400">tCO₂e</span>
+                </div>
+                <div className="mt-2.5 text-[11px] text-slate-400 font-mono space-y-0.5">
+                  <div className="flex justify-between"><span>Model Confidence:</span> <span className="text-emerald-400 font-bold">{todayPrediction.confidence}%</span></div>
+                  <div className="flex justify-between"><span>Monthly Run-Rate:</span> <span className="text-white">{todayPrediction.monthlyTons} T</span></div>
+                  <div className="flex justify-between"><span>Peak Risk Level:</span> <span className="text-amber-400 uppercase font-bold">{todayPrediction.peakRisk}</span></div>
+                </div>
+              </div>
+
+              {/* Comparison Variance */}
+              <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
+                <div className="text-xs font-mono text-slate-400 uppercase mb-1">Variance (Actual - Pred)</div>
+                <div className={`text-3xl font-black font-mono mt-1 ${
+                  Math.abs(Number(((todayActual.daily_tons_co2e - todayPrediction.dailyTons) / todayPrediction.dailyTons) * 100)) <= 5
+                    ? "text-emerald-400"
+                    : todayActual.daily_tons_co2e > todayPrediction.dailyTons
+                    ? "text-amber-400"
+                    : "text-emerald-400"
+                }`}>
+                  {todayActual.daily_tons_co2e - todayPrediction.dailyTons > 0 ? `+${(todayActual.daily_tons_co2e - todayPrediction.dailyTons).toFixed(3)}` : (todayActual.daily_tons_co2e - todayPrediction.dailyTons).toFixed(3)} <span className="text-sm font-normal text-slate-400">T</span>
+                </div>
+                <div className="mt-2.5 text-[11px] font-mono">
+                  <span className="text-slate-400">Delta: </span>
+                  <span className="font-bold text-white">
+                    {((todayActual.daily_tons_co2e - todayPrediction.dailyTons) / todayPrediction.dailyTons * 100).toFixed(1)}%
+                  </span>
+                </div>
+                <div className="mt-1 text-[10px] text-slate-400 leading-tight">
+                  {Math.abs((todayActual.daily_tons_co2e - todayPrediction.dailyTons) / todayPrediction.dailyTons * 100) <= 5
+                    ? "✓ Operational emissions align with ML target"
+                    : todayActual.daily_tons_co2e > todayPrediction.dailyTons
+                    ? "⚠ Exceeding target · Check chiller/lab draw"
+                    : "✓ Emission savings verified vs model"}
+                </div>
+              </div>
+
+              {/* Next 30-Day Outlook Preview */}
+              <div className="p-4 rounded-2xl bg-white/5 border border-white/10 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between text-xs font-mono text-slate-400 mb-1">
+                    <span className="uppercase">Next 30-Day Outlook</span>
+                    <Calendar size={13} className="text-emerald-400" />
+                  </div>
+                  <div className="text-3xl font-black text-emerald-400 font-mono mt-1">
+                    {forecast30Summary.total_predicted_tons} <span className="text-sm font-normal text-slate-400">T</span>
+                  </div>
+                  <div className="text-[11px] text-slate-400 mt-1 font-mono">
+                    Starts tomorrow · Avg: {forecast30Summary.average_daily_tons} T/day
+                  </div>
+                </div>
+
+                <div className="mt-2 pt-2 border-t border-white/10 flex items-center justify-between text-[11px]">
+                  <span className="text-slate-400">Peak Risk Day:</span>
+                  <span className="font-mono text-rose-400 font-bold">{forecast30Summary.peak_day.tons} T</span>
+                </div>
+              </div>
+            </div>
+
+            {/* AI Agent Recommendation Ticker */}
+            <div className="relative z-10 mt-4 pt-3 border-t border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2 text-slate-300">
+                <span className="p-1 rounded-lg bg-emerald-500/20 text-emerald-400 font-bold shrink-0">
+                  <Bot size={13} />
+                </span>
+                <span className="font-semibold text-white">AI Suggestion:</span>
+                <span className="text-slate-300 truncate max-w-xl">{aiTip.title} — Save {aiTip.saving} ({aiTip.rupees})</span>
+              </div>
+              <button
+                onClick={() => navigate('/predictions')}
+                className="text-emerald-400 hover:text-emerald-300 font-mono font-bold flex items-center gap-1 shrink-0 bg-transparent border-none cursor-pointer"
+              >
+                <span>View Full AI Reduction Plan</span>
+                <ArrowRight size={12} />
+              </button>
+            </div>
+          </div>
         </ScrollReveal>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
@@ -966,6 +1239,134 @@ export default function Dashboard() {
         </ScrollReveal>
 
       </main>
+
+      {/* ── Quick Telemetry Logger Modal ── */}
+      {telemetryModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-7 max-w-xl w-full shadow-2xl relative text-slate-900 dark:text-white">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500">
+                  <Sliders size={18} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold">Log Today's Operational Telemetry</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Recalculate today's actual footprint &amp; store for continuous ML improvement</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setTelemetryModalOpen(false)}
+                className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-white transition cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="space-y-4 py-5 text-xs">
+              {/* Grid kWh */}
+              <div className="space-y-1">
+                <div className="flex justify-between font-medium">
+                  <span>Substation Grid Electricity (kWh)</span>
+                  <span className="font-mono font-bold text-slate-900 dark:text-white">{todayInputs.gridDailyKwh} kWh</span>
+                </div>
+                <input
+                  type="range"
+                  min="2000"
+                  max="7500"
+                  step="50"
+                  value={todayInputs.gridDailyKwh}
+                  onChange={(e) => handleUpdateTodayInputs('gridDailyKwh', Number(e.target.value))}
+                  className="w-full"
+                />
+              </div>
+
+              {/* Solar kWh */}
+              <div className="space-y-1">
+                <div className="flex justify-between font-medium">
+                  <span>Rooftop Solar Generation (kWh)</span>
+                  <span className="font-mono font-bold text-amber-500">{todayInputs.solarGenerationKwh} kWh</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="800"
+                  step="10"
+                  value={todayInputs.solarGenerationKwh}
+                  onChange={(e) => handleUpdateTodayInputs('solarGenerationKwh', Number(e.target.value))}
+                  className="w-full"
+                />
+              </div>
+
+              {/* Diesel Liters */}
+              <div className="space-y-1">
+                <div className="flex justify-between font-medium">
+                  <span>Diesel Fuel Consumed (Liters)</span>
+                  <span className="font-mono font-bold text-slate-900 dark:text-white">{todayInputs.dieselLiters} L</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="450"
+                  step="5"
+                  value={todayInputs.dieselLiters}
+                  onChange={(e) => handleUpdateTodayInputs('dieselLiters', Number(e.target.value))}
+                  className="w-full"
+                />
+              </div>
+
+              {/* Ambient Temp */}
+              <div className="space-y-1">
+                <div className="flex justify-between font-medium">
+                  <span>Ambient Temperature (°C)</span>
+                  <span className="font-mono font-bold text-slate-900 dark:text-white">{todayInputs.ambientTemp}°C</span>
+                </div>
+                <input
+                  type="range"
+                  min="18"
+                  max="46"
+                  step="0.5"
+                  value={todayInputs.ambientTemp}
+                  onChange={(e) => handleUpdateTodayInputs('ambientTemp', Number(e.target.value))}
+                  className="w-full"
+                />
+              </div>
+
+              {/* Live Preview of Calculated Actual */}
+              <div className="p-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                <div>
+                  <span className="text-[11px] font-mono text-slate-500 uppercase">Recalculated Today Actual</span>
+                  <div className="text-xl font-black font-mono text-emerald-500 mt-0.5">
+                    {todayActual.daily_tons_co2e} <span className="text-xs text-slate-400">tCO₂e</span>
+                  </div>
+                </div>
+                <div className="text-right text-[11px] font-mono text-slate-500">
+                  <div>Predicted: {todayPrediction.dailyTons} T</div>
+                  <div className="font-bold text-slate-900 dark:text-white">
+                    Delta: {todayActual.daily_tons_co2e - todayPrediction.dailyTons > 0 ? `+${(todayActual.daily_tons_co2e - todayPrediction.dailyTons).toFixed(2)}` : (todayActual.daily_tons_co2e - todayPrediction.dailyTons).toFixed(2)} T
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+              <button
+                onClick={() => setTelemetryModalOpen(false)}
+                className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveTodayActual}
+                disabled={isSavingDaily}
+                className="px-5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs flex items-center gap-2 transition shadow-lg shadow-emerald-500/25 cursor-pointer"
+              >
+                <Save size={14} />
+                <span>{isSavingDaily ? "Storing Data..." : "Save & Store Today's Data"}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Notification Toast */}
       <div className={`fixed bottom-6 right-6 transform transition-all duration-300 bg-white dark:bg-brand-card border border-slate-200 dark:border-brand-border p-4 rounded-xl shadow-2xl flex items-center gap-3 text-xs text-slate-900 dark:text-white z-50 ${toastVisible ? 'translate-y-0 opacity-100' : 'translate-y-20 opacity-0 pointer-events-none'}`}>

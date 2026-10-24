@@ -6,6 +6,7 @@ from fastapi.security import OAuth2PasswordBearer
 from app.config import settings
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     to_encode = data.copy()
@@ -26,3 +27,11 @@ def verify_token(token: str) -> dict:
 
 def get_current_user(token: str = Depends(oauth2_scheme)) -> dict:
     return verify_token(token)
+
+def get_optional_user(token: Optional[str] = Depends(oauth2_scheme_optional)) -> Optional[dict]:
+    if not token:
+        return None
+    try:
+        return jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
+    except Exception:
+        return None
