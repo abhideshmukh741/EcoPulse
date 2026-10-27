@@ -1,0 +1,2 @@
+date,actual_tons,predicted_tons,variance_tons,variance_pct,status,scope1_actual,scope2_actual,scope3_actual,academic_phase,student_footfall,ambient_temp,lab_compute_load,solar_kwp,daily_tons_co2e,scope1_tco2e,scope2_tco2e,scope3_tco2e
+2026-10-24,8.623,0.0,8.623,862.3,High Emission Spike,0.723,2.871,5.029,regular,4180,32.0,medium,200.0,8.623,0.723,2.871,5.029

@@ -47,16 +47,6 @@ export default function AdminSettings() {
     }
   };
 
-  const [departmentCaps, setDepartmentCaps] = useState(() => {
-    try {
-      const saved = localStorage.getItem("ecopulse_admin_caps");
-      return saved ? JSON.parse(saved) : {
-        cse: 420, aids: 310, mech: 340, civil: 180, electrical: 290, plastic: 260, agri: 210,
-      };
-    } catch {
-      return { cse: 420, aids: 310, mech: 340, civil: 180, electrical: 290, plastic: 260, agri: 210 };
-    }
-  });
 
   const [toggles, setToggles] = useState(() => {
     try {
@@ -81,7 +71,6 @@ export default function AdminSettings() {
     e.preventDefault();
     const profile = { collegeName, campusAcres, totalStudents, naacAccreditation };
     localStorage.setItem("ecopulse_admin_profile", JSON.stringify(profile));
-    localStorage.setItem("ecopulse_admin_caps", JSON.stringify(departmentCaps));
     localStorage.setItem("ecopulse_admin_toggles", JSON.stringify(toggles));
     setSaveToast(true);
     setTimeout(() => setSaveToast(false), 3000);
@@ -166,35 +155,6 @@ export default function AdminSettings() {
               </form>
             </div>
 
-            {/* Department Annual Carbon Ceilings */}
-            <div className="bg-white dark:bg-[#232936] rounded-xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6">Department Annual Carbon Ceilings</h3>
-              
-              <div className="space-y-4">
-                {[
-                  { label: "Computer Science & Engineering", key: "cse", val: departmentCaps.cse },
-                  { label: "AI & Data Science (AI&DS)", key: "aids", val: departmentCaps.aids },
-                  { label: "Mechanical & Central Workshop", key: "mech", val: departmentCaps.mech },
-                  { label: "Civil Engineering", key: "civil", val: departmentCaps.civil },
-                  { label: "Electrical Engineering", key: "electrical", val: departmentCaps.electrical },
-                  { label: "Plastic & Polymer Engineering", key: "plastic", val: departmentCaps.plastic },
-                  { label: "Agricultural Engineering", key: "agri", val: departmentCaps.agri },
-                ].map((dept) => (
-                  <div key={dept.key} className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{dept.label}</span>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        className="w-24 px-3 py-1 bg-transparent border border-slate-300 dark:border-slate-600 rounded-md text-sm text-center text-slate-900 dark:text-white focus:outline-none"
-                        value={dept.val}
-                        onChange={(e) => setDepartmentCaps({ ...departmentCaps, [dept.key]: Number(e.target.value) })}
-                      />
-                      <span className="text-xs text-slate-500">Tons</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
 
           </div>
 
@@ -248,7 +208,6 @@ export default function AdminSettings() {
                       campusAcres: Number(campusAcres),
                       totalPopulation: Number(totalStudents),
                       naacAccreditation,
-                      departmentCaps,
                       naacCriterionViiCompliance: toggles,
                       latestAudit: auditData,
                       exportedAt: new Date().toISOString(),

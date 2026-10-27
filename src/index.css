@@ -5171,19 +5171,19 @@ html.light, body.light, .app.light {
    EXTENDED LIGHT MODE TEXT & COMPONENT OVERRIDES
    ============================================================ */
 
-/* Headings and Base Text (standard light surfaces only; protects dark cards/panels) */
-.light h1:not(.dark-preserve *):not(.telemetry-dark-card *):not(.ai-agent-panel *):not([class*="text-white"]):not([class*="text-emerald"]):not([class*="text-amber"]):not([class*="text-rose"]),
-.light h2:not(.dark-preserve *):not(.telemetry-dark-card *):not(.ai-agent-panel *):not([class*="text-white"]):not([class*="text-emerald"]):not([class*="text-amber"]):not([class*="text-rose"]),
-.light h3:not(.dark-preserve *):not(.telemetry-dark-card *):not(.ai-agent-panel *):not([class*="text-white"]):not([class*="text-emerald"]):not([class*="text-amber"]):not([class*="text-rose"]),
-.light h4:not(.dark-preserve *):not(.telemetry-dark-card *):not(.ai-agent-panel *):not([class*="text-white"]):not([class*="text-emerald"]):not([class*="text-amber"]):not([class*="text-rose"]),
-.light h5:not(.dark-preserve *):not(.telemetry-dark-card *):not(.ai-agent-panel *),
-.light h6:not(.dark-preserve *):not(.telemetry-dark-card *):not(.ai-agent-panel *) {
+/* Headings and Base Text */
+.light h1:not([class*="text-white"]):not([class*="text-emerald"]):not([class*="text-amber"]):not([class*="text-rose"]),
+.light h2:not([class*="text-white"]):not([class*="text-emerald"]):not([class*="text-amber"]):not([class*="text-rose"]),
+.light h3:not([class*="text-white"]):not([class*="text-emerald"]):not([class*="text-amber"]):not([class*="text-rose"]),
+.light h4:not([class*="text-white"]):not([class*="text-emerald"]):not([class*="text-amber"]):not([class*="text-rose"]),
+.light h5,
+.light h6 {
   color: #0f172a;
 }
 
-.light p:not(.dark-preserve *):not(.telemetry-dark-card *):not(.ai-agent-panel *),
-.light span:not(.gradient-text):not(.active):not(.dark-preserve *):not(.telemetry-dark-card *):not(.ai-agent-panel *),
-.light label:not(.dark-preserve *):not(.telemetry-dark-card *):not(.ai-agent-panel *) {
+.light p,
+.light span:not(.gradient-text):not(.active),
+.light label {
   color: #334155;
 }
 
@@ -5545,144 +5545,29 @@ html.light, body.light, .app.light {
 }
 
 .light .pbi-card, 
-.light .dashboard-v2 div[class*="bg-["]:not(.telemetry-dark-card):not(.telemetry-dark-card *):not(.dark-preserve):not(.dark-preserve *),
-.light .dashboard-v2 .bg-slate-900:not(.telemetry-dark-card):not(.telemetry-dark-card *):not(.dark-preserve):not(.dark-preserve *),
-.light .dashboard-v2 .bg-slate-800:not(.telemetry-dark-card):not(.telemetry-dark-card *):not(.dark-preserve):not(.dark-preserve *),
-.light .dashboard-v2 .bg-slate-900\/50:not(.telemetry-dark-card):not(.telemetry-dark-card *):not(.dark-preserve):not(.dark-preserve *),
-.light .dashboard-v2 .bg-emerald-950\/30:not(.telemetry-dark-card):not(.telemetry-dark-card *):not(.dark-preserve):not(.dark-preserve *),
-.light .dashboard-v2 .bg-black\/20:not(.telemetry-dark-card):not(.telemetry-dark-card *):not(.dark-preserve):not(.dark-preserve *) {
+.light .dashboard-v2 div[class*="bg-["],
+.light .dashboard-v2 .bg-slate-900,
+.light .dashboard-v2 .bg-slate-800,
+.light .dashboard-v2 .bg-slate-900\/50,
+.light .dashboard-v2 .bg-emerald-950\/30,
+.light .dashboard-v2 .bg-black\/20 {
   background-color: #ffffff !important;
   border-color: #e2e8f0 !important;
   color: #0f172a !important;
 }
 
-.light .dashboard-v2 :not(.telemetry-dark-card):not(.telemetry-dark-card *):not(.dark-preserve):not(.dark-preserve *) > .text-slate-400,
-.light .dashboard-v2 :not(.telemetry-dark-card):not(.telemetry-dark-card *):not(.dark-preserve):not(.dark-preserve *) > .text-slate-300,
-.light .dashboard-v2 :not(.telemetry-dark-card):not(.telemetry-dark-card *):not(.dark-preserve):not(.dark-preserve *) > .text-emerald-400\/80,
-.light .dashboard-v2 :not(.telemetry-dark-card):not(.telemetry-dark-card *):not(.dark-preserve):not(.dark-preserve *) > .text-emerald-500\/70 {
+.light .dashboard-v2 > .text-slate-400,
+.light .dashboard-v2 > .text-slate-300,
+.light .dashboard-v2 > .text-emerald-400\/80,
+.light .dashboard-v2 > .text-emerald-500\/70 {
   color: #475569 !important;
 }
 
-.light .dashboard-v2 .border-slate-800:not(.telemetry-dark-card):not(.telemetry-dark-card *),
-.light .dashboard-v2 .border-slate-800\/60:not(.telemetry-dark-card):not(.telemetry-dark-card *),
-.light .dashboard-v2 .border-slate-700\/50:not(.telemetry-dark-card):not(.telemetry-dark-card *),
-.light .dashboard-v2 .border-emerald-500\/20:not(.telemetry-dark-card):not(.telemetry-dark-card *) {
+.light .dashboard-v2 .border-slate-800,
+.light .dashboard-v2 .border-slate-800\/60,
+.light .dashboard-v2 .border-slate-700\/50,
+.light .dashboard-v2 .border-emerald-500\/20 {
   border-color: #e2e8f0 !important;
-}
-
-/* ============================================================
-   DARK CARDS & INTELLIGENCE PANELS HIGH CONTRAST PRESERVATION
-   Applies to Step 6 AI Agent Card & Dashboard Today's Carbon Pulse
-   ============================================================ */
-.dark-preserve,
-.telemetry-dark-card,
-.ai-agent-panel {
-  background: linear-gradient(135deg, #090d16 0%, #0d1527 50%, #060911 100%) !important;
-  color: #f8fafc !important;
-  border-color: rgba(16, 185, 129, 0.35) !important;
-}
-
-.dark-preserve h1, .dark-preserve h2, .dark-preserve h3, .dark-preserve h4,
-.telemetry-dark-card h1, .telemetry-dark-card h2, .telemetry-dark-card h3, .telemetry-dark-card h4,
-.ai-agent-panel h1, .ai-agent-panel h2, .ai-agent-panel h3, .ai-agent-panel h4,
-.light .dark-preserve h1, .light .dark-preserve h2, .light .dark-preserve h3, .light .dark-preserve h4,
-.light .telemetry-dark-card h1, .light .telemetry-dark-card h2, .light .telemetry-dark-card h3, .light .telemetry-dark-card h4,
-.light .ai-agent-panel h1, .light .ai-agent-panel h2, .light .ai-agent-panel h3, .light .ai-agent-panel h4 {
-  color: #ffffff !important;
-}
-
-.dark-preserve p,
-.telemetry-dark-card p,
-.ai-agent-panel p,
-.light .dark-preserve p,
-.light .telemetry-dark-card p,
-.light .ai-agent-panel p {
-  color: #cbd5e1 !important;
-}
-
-.dark-preserve .text-white,
-.telemetry-dark-card .text-white,
-.ai-agent-panel .text-white,
-.light .dark-preserve .text-white,
-.light .telemetry-dark-card .text-white,
-.light .ai-agent-panel .text-white {
-  color: #ffffff !important;
-}
-
-.dark-preserve .text-slate-300,
-.telemetry-dark-card .text-slate-300,
-.ai-agent-panel .text-slate-300,
-.light .dark-preserve .text-slate-300,
-.light .telemetry-dark-card .text-slate-300,
-.light .ai-agent-panel .text-slate-300 {
-  color: #e2e8f0 !important;
-}
-
-.dark-preserve .text-slate-400,
-.telemetry-dark-card .text-slate-400,
-.ai-agent-panel .text-slate-400,
-.light .dark-preserve .text-slate-400,
-.light .telemetry-dark-card .text-slate-400,
-.light .ai-agent-panel .text-slate-400 {
-  color: #94a3b8 !important;
-}
-
-.dark-preserve .text-emerald-400,
-.telemetry-dark-card .text-emerald-400,
-.ai-agent-panel .text-emerald-400,
-.light .dark-preserve .text-emerald-400,
-.light .telemetry-dark-card .text-emerald-400,
-.light .ai-agent-panel .text-emerald-400 {
-  color: #34d399 !important;
-}
-
-.dark-preserve .text-amber-400,
-.telemetry-dark-card .text-amber-400,
-.ai-agent-panel .text-amber-400,
-.light .dark-preserve .text-amber-400,
-.light .telemetry-dark-card .text-amber-400,
-.light .ai-agent-panel .text-amber-400 {
-  color: #fbbf24 !important;
-}
-
-.dark-preserve .text-amber-300,
-.telemetry-dark-card .text-amber-300,
-.ai-agent-panel .text-amber-300,
-.light .dark-preserve .text-amber-300,
-.light .telemetry-dark-card .text-amber-300,
-.light .ai-agent-panel .text-amber-300 {
-  color: #fcd34d !important;
-}
-
-.dark-preserve .text-rose-400,
-.telemetry-dark-card .text-rose-400,
-.ai-agent-panel .text-rose-400,
-.light .dark-preserve .text-rose-400,
-.light .telemetry-dark-card .text-rose-400,
-.light .ai-agent-panel .text-rose-400 {
-  color: #f87171 !important;
-}
-
-.dark-preserve .text-rose-300,
-.telemetry-dark-card .text-rose-300,
-.ai-agent-panel .text-rose-300,
-.light .dark-preserve .text-rose-300,
-.light .telemetry-dark-card .text-rose-300,
-.light .ai-agent-panel .text-rose-300 {
-  color: #fca5a5 !important;
-}
-
-.dark-preserve .bg-white\/5,
-.telemetry-dark-card .bg-white\/5,
-.ai-agent-panel .bg-white\/5 {
-  background-color: rgba(255, 255, 255, 0.05) !important;
-  border-color: rgba(255, 255, 255, 0.1) !important;
-}
-
-.dark-preserve .bg-white\/10,
-.telemetry-dark-card .bg-white\/10,
-.ai-agent-panel .bg-white\/10 {
-  background-color: rgba(255, 255, 255, 0.08) !important;
 }
 
 /* ============================================================

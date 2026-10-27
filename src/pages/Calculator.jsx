@@ -27,6 +27,49 @@ export default function Calculator() {
   const [saveError, setSaveError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
+  // ── Equipment-Based Lab Simulator State ──
+  const [simLabs, setSimLabs] = useState(24);
+  const [pcsPerLab, setPcsPerLab] = useState(30);
+  const [acsPerLab, setAcsPerLab] = useState(2);
+  const [simLabHours, setSimLabHours] = useState(8);
+  const [simHvac, setSimHvac] = useState(8);
+  const [simEvShare, setSimEvShare] = useState(25);
+
+  const resetSimulator = () => {
+    setSimLabs(24);
+    setPcsPerLab(30);
+    setAcsPerLab(2);
+    setSimLabHours(8);
+    setSimHvac(8);
+    setSimEvShare(25);
+  };
+
+  // ── Equipment-Based Power & Emission Calculations ──
+  const PC_KW = 0.30;       // Desktop computer ~300W avg under load
+  const MONITOR_KW = 0.05;  // LCD monitor ~50W
+  const AC_KW = 1.50;       // 1.5-ton split AC ~1500W
+  const LIGHT_KW = 0.20;    // Lights per lab ~200W
+  const PROJECTOR_KW = 0.30;// Projector ~300W
+  const GRID_EF = 0.000716; // India CEA 2023: 0.716 kg CO2/kWh
+  const WORKING_DAYS = 250; // Academic working days/year
+
+  const labKW = (pcsPerLab * PC_KW) + (pcsPerLab * MONITOR_KW) + (acsPerLab * AC_KW) + LIGHT_KW + PROJECTOR_KW;
+  const labDailyKWh = labKW * simLabHours;
+  const labDailyCO2 = labDailyKWh * GRID_EF;
+  const labAnnualCO2 = labDailyCO2 * WORKING_DAYS;
+
+  const baselineLabKW = (30 * PC_KW) + (30 * MONITOR_KW) + (2 * AC_KW) + LIGHT_KW + PROJECTOR_KW; // 14 kW
+  const baselineLabAnnualCO2 = baselineLabKW * 8 * GRID_EF * WORKING_DAYS; // ~20.05 T/lab/yr
+  const deltaLabs = (simLabs * labAnnualCO2) - (24 * baselineLabAnnualCO2);
+
+  const HVAC_CAMPUS_KW = 150;
+  const deltaHvac = (simHvac - 8) * HVAC_CAMPUS_KW * GRID_EF * WORKING_DAYS;
+
+  const FLEET_BASELINE_ANNUAL = 330;
+  const deltaEV = -((simEvShare - 25) / 100) * FLEET_BASELINE_ANNUAL;
+
+  const yearlyDelta = deltaLabs + deltaHvac + deltaEV;
+
   const auditResult = useMemo(() => {
     const labBaseAnnualKwh = labCount * 300 * 250;
     const hvacAnnualKwh = labCount * hvacHours * 18 * 220;
@@ -501,6 +544,218 @@ export default function Calculator() {
           </div>
         </ScrollReveal>
 
+      </section>
+
+      {/* ── INTERACTIVE CARBON SIMULATOR: Equipment-Based Lab Emission Calculator ── */}
+      <section className="max-w-7xl mx-auto px-6 pb-24">
+        <ScrollReveal variant="fadeUp" delay={0.1} duration={0.6}>
+          <div className="audit-glass-card rounded-3xl p-6 sm:p-8 border border-[#E2E8F0] dark:border-[#2C2E33] shadow-md dark:shadow-none">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-5 border-b border-slate-200 dark:border-slate-800">
+              <div>
+                <div className="text-xs font-mono uppercase text-[#059669] dark:text-[#10B981] font-bold tracking-wider">
+                  Interactive Carbon Simulator
+                </div>
+                <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white mt-1">
+                  Equipment-Based Lab Emission Calculator
+                </h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  Uses India CEA 2023 Grid Emission Factor: 0.716 kg CO2/kWh
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={resetSimulator}
+                className="self-start sm:self-auto text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-1.5 transition bg-transparent cursor-pointer"
+              >
+                <i className="ph ph-arrow-counter-clockwise"></i> Reset Defaults
+              </button>
+            </div>
+
+            {/* Sliders Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Active Labs on Campus */}
+              <div className="space-y-2">
+                <div className="flex justify-between text-xs">
+                  <span className="font-medium text-slate-600 dark:text-slate-300">Active Labs on Campus</span>
+                  <span className="font-mono font-bold text-slate-900 dark:text-white bg-slate-200 dark:bg-slate-800 px-2.5 py-0.5 rounded-lg">{simLabs} Labs</span>
+                </div>
+                <input
+                  type="range"
+                  min="5"
+                  max="60"
+                  value={simLabs}
+                  onChange={(e) => setSimLabs(Number(e.target.value))}
+                  className="w-full accent-[#10B981] cursor-pointer"
+                />
+                <div className="flex justify-between text-[10px] text-slate-400 font-mono">
+                  <span>5 Labs</span>
+                  <span>60 Labs</span>
+                </div>
+              </div>
+
+              {/* Computers Per Lab */}
+              <div className="space-y-2">
+                <div className="flex justify-between text-xs">
+                  <span className="font-medium text-slate-600 dark:text-slate-300">Computers Per Lab</span>
+                  <span className="font-mono font-bold text-slate-900 dark:text-white bg-slate-200 dark:bg-slate-800 px-2.5 py-0.5 rounded-lg">{pcsPerLab} PCs</span>
+                </div>
+                <input
+                  type="range"
+                  min="10"
+                  max="60"
+                  value={pcsPerLab}
+                  onChange={(e) => setPcsPerLab(Number(e.target.value))}
+                  className="w-full accent-[#10B981] cursor-pointer"
+                />
+                <div className="flex justify-between text-[10px] text-slate-400 font-mono">
+                  <span>10 PCs (Small)</span>
+                  <span>60 PCs (Large)</span>
+                </div>
+              </div>
+
+              {/* ACs Per Lab */}
+              <div className="space-y-2">
+                <div className="flex justify-between text-xs">
+                  <span className="font-medium text-slate-600 dark:text-slate-300">ACs Per Lab (1.5 Ton)</span>
+                  <span className="font-mono font-bold text-slate-900 dark:text-white bg-slate-200 dark:bg-slate-800 px-2.5 py-0.5 rounded-lg">{acsPerLab} ACs</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="6"
+                  value={acsPerLab}
+                  onChange={(e) => setAcsPerLab(Number(e.target.value))}
+                  className="w-full accent-[#10B981] cursor-pointer"
+                />
+                <div className="flex justify-between text-[10px] text-slate-400 font-mono">
+                  <span>0 (No AC)</span>
+                  <span>6 ACs</span>
+                </div>
+              </div>
+
+              {/* Lab Operating Hours */}
+              <div className="space-y-2">
+                <div className="flex justify-between text-xs">
+                  <span className="font-medium text-slate-600 dark:text-slate-300">Lab Operating Hours / Day</span>
+                  <span className="font-mono font-bold text-slate-900 dark:text-white bg-slate-200 dark:bg-slate-800 px-2.5 py-0.5 rounded-lg">{simLabHours} Hrs</span>
+                </div>
+                <input
+                  type="range"
+                  min="2"
+                  max="16"
+                  value={simLabHours}
+                  onChange={(e) => setSimLabHours(Number(e.target.value))}
+                  className="w-full accent-[#10B981] cursor-pointer"
+                />
+                <div className="flex justify-between text-[10px] text-slate-400 font-mono">
+                  <span>2 Hrs (Minimal)</span>
+                  <span>16 Hrs (Extended)</span>
+                </div>
+              </div>
+
+              {/* Central HVAC Duration */}
+              <div className="space-y-2">
+                <div className="flex justify-between text-xs">
+                  <span className="font-medium text-slate-600 dark:text-slate-300">Central HVAC Duration</span>
+                  <span className="font-mono font-bold text-slate-900 dark:text-white bg-slate-200 dark:bg-slate-800 px-2.5 py-0.5 rounded-lg">{simHvac} Hrs/day</span>
+                </div>
+                <input
+                  type="range"
+                  min="2"
+                  max="16"
+                  value={simHvac}
+                  onChange={(e) => setSimHvac(Number(e.target.value))}
+                  className="w-full accent-[#10B981] cursor-pointer"
+                />
+                <div className="flex justify-between text-[10px] text-slate-400 font-mono">
+                  <span>2 Hrs (Savings)</span>
+                  <span>16 Hrs (Heavy)</span>
+                </div>
+              </div>
+
+              {/* Transit Fleet EV / CNG Share */}
+              <div className="space-y-2">
+                <div className="flex justify-between text-xs">
+                  <span className="font-medium text-slate-600 dark:text-slate-300">Transit Fleet EV / CNG Share</span>
+                  <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-500/10 px-2.5 py-0.5 rounded-lg">{simEvShare}% Clean</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="5"
+                  value={simEvShare}
+                  onChange={(e) => setSimEvShare(Number(e.target.value))}
+                  className="w-full accent-[#10B981] cursor-pointer"
+                />
+                <div className="flex justify-between text-[10px] text-slate-400 font-mono">
+                  <span>0% Diesel Only</span>
+                  <span>100% Fully Electric</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Equipment Breakdown Card */}
+            <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-800">
+              <div className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-4">
+                Per-Lab Power Breakdown (Real Equipment)
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {/* Left: Equipment table */}
+                <div className="bg-slate-50 dark:bg-[#141518] rounded-2xl p-5 border border-slate-200 dark:border-slate-800">
+                  <div className="space-y-3">
+                    {[
+                      { icon: 'ph-desktop', label: `${pcsPerLab} Desktops (300W each)`, kw: pcsPerLab * 0.30 },
+                      { icon: 'ph-monitor', label: `${pcsPerLab} Monitors (50W each)`, kw: pcsPerLab * 0.05 },
+                      { icon: 'ph-thermometer-cold', label: `${acsPerLab} ACs 1.5T (1500W each)`, kw: acsPerLab * 1.50 },
+                      { icon: 'ph-lamp', label: 'Lighting (per lab)', kw: 0.20 },
+                      { icon: 'ph-projector-screen', label: 'Projector', kw: 0.30 },
+                    ].map((item) => (
+                      <div key={item.label} className="flex items-center justify-between text-xs">
+                        <span className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+                          <i className={`ph ${item.icon} text-sm text-slate-400`}></i>
+                          {item.label}
+                        </span>
+                        <span className="font-mono font-semibold text-slate-900 dark:text-white">{item.kw.toFixed(1)} kW</span>
+                      </div>
+                    ))}
+                    <div className="pt-3 mt-3 border-t border-slate-200 dark:border-slate-800 flex justify-between text-xs font-bold">
+                      <span className="text-slate-900 dark:text-white">Total Per Lab</span>
+                      <span className="text-[#059669] dark:text-[#10B981] font-mono">{labKW.toFixed(1)} kW</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right: Calculation chain */}
+                <div className="bg-slate-50 dark:bg-[#141518] rounded-2xl p-5 border border-slate-200 dark:border-slate-800">
+                  <div className="space-y-3">
+                    {[
+                      { label: 'Power per lab', value: `${labKW.toFixed(1)} kW`, sub: `${pcsPerLab} PCs + ${acsPerLab} ACs + lights + projector` },
+                      { label: `Daily kWh (${simLabHours} hrs)`, value: `${labDailyKWh.toFixed(1)} kWh`, sub: `${labKW.toFixed(1)} kW x ${simLabHours} hrs` },
+                      { label: 'Daily CO2 per lab', value: `${(labDailyCO2 * 1000).toFixed(1)} kg`, sub: `${labDailyKWh.toFixed(1)} kWh x 0.716 kg/kWh` },
+                      { label: 'Annual CO2 per lab', value: `${labAnnualCO2.toFixed(2)} T`, sub: `x 250 working days` },
+                      { label: `Total (${simLabs} labs)`, value: `${(simLabs * labAnnualCO2).toFixed(1)} T/yr`, sub: `${simLabs} labs x ${labAnnualCO2.toFixed(2)} T` },
+                    ].map((row) => (
+                      <div key={row.label} className="flex items-start justify-between text-xs">
+                        <div>
+                          <span className="font-medium text-slate-700 dark:text-slate-200">{row.label}</span>
+                          <div className="text-[10px] text-slate-400 font-mono">{row.sub}</div>
+                        </div>
+                        <span className="font-mono font-bold text-slate-900 dark:text-white whitespace-nowrap">{row.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-3.5 pt-3 border-t border-slate-200 dark:border-slate-800 flex justify-between text-xs">
+                    <span className="font-bold text-slate-900 dark:text-white">Net Footprint Change</span>
+                    <span className={`font-mono font-bold ${yearlyDelta > 0 ? 'text-rose-500' : yearlyDelta < 0 ? 'text-emerald-500' : 'text-slate-500'}`}>
+                      {yearlyDelta > 0 ? '+' : ''}{yearlyDelta.toFixed(1)} T/yr
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </ScrollReveal>
       </section>
     </div>
   );

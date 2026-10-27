@@ -1106,19 +1106,19 @@ export default function Predictions() {
         {/* ── STEP 6: AI CARBON REDUCTION AGENT ─────────────────────────────── */}
         {(activeTab === "all" || activeTab === "agent") && (
           <ScrollReveal variant="fadeUp" delay={0.3} duration={0.5}>
-            <div className="dark-preserve ai-agent-panel bg-gradient-to-br from-slate-900 to-slate-950 text-white rounded-3xl p-6 sm:p-8 border border-emerald-500/30 shadow-2xl relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+            <div className="bg-white dark:bg-gradient-to-br dark:from-slate-900 dark:to-slate-950 text-slate-900 dark:text-white rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-emerald-500/30 shadow-lg dark:shadow-2xl relative overflow-hidden transition-colors">
+              <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/5 dark:bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
               
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-white/10 relative z-10">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-200 dark:border-white/10 relative z-10">
                 <div>
-                  <div className="flex items-center gap-2 mb-1 text-emerald-400 font-mono text-xs font-bold uppercase tracking-wider">
+                  <div className="flex items-center gap-2 mb-1 text-emerald-700 dark:text-emerald-400 font-mono text-xs font-bold uppercase tracking-wider">
                     <Bot size={15} />
                     <span>Step 6 · Autonomous AI Carbon Intelligence Agent</span>
                   </div>
-                  <h2 className="text-2xl sm:text-3xl font-black text-white">
+                  <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
                     Intelligent Suggestions for Reducing Carbon Emissions
                   </h2>
-                  <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-xl">
+                  <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-xl">
                     The AI Agent analyzes the discrepancies between predicted and recorded actual emissions to generate prioritized, high-impact reduction actions.
                   </p>
                 </div>
@@ -1126,7 +1126,7 @@ export default function Predictions() {
                 <button
                   onClick={handleReanalyzeAi}
                   disabled={isAnalyzingAi}
-                  className="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs flex items-center gap-2 transition shadow-lg shadow-emerald-500/30 cursor-pointer disabled:opacity-60 shrink-0"
+                  className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600 text-white font-bold text-xs flex items-center gap-2 transition shadow-lg shadow-emerald-600/20 dark:shadow-emerald-500/30 cursor-pointer disabled:opacity-60 shrink-0"
                 >
                   <RefreshCw size={14} className={isAnalyzingAi ? "animate-spin" : ""} />
                   <span>{isAnalyzingAi ? "Analyzing Discrepancies..." : "Re-Analyze with AI Agent"}</span>
@@ -1134,17 +1134,17 @@ export default function Predictions() {
               </div>
 
               {/* Executive Diagnosis Box */}
-              <div className="mt-6 p-4 rounded-2xl bg-white/5 border border-white/10 relative z-10 text-xs sm:text-sm leading-relaxed text-slate-300">
-                <div className="flex items-center gap-2 text-emerald-400 font-bold font-mono text-xs mb-1 uppercase">
+              <div className="mt-6 p-4 rounded-2xl bg-emerald-50/60 dark:bg-white/5 border border-emerald-200 dark:border-white/10 relative z-10 text-xs sm:text-sm leading-relaxed text-slate-700 dark:text-slate-300">
+                <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-bold font-mono text-xs mb-1 uppercase">
                   <ShieldCheck size={14} />
                   <span>AI Agent Diagnosis Summary</span>
                 </div>
-                <p>{aiAnalysis?.executive_summary}</p>
-                <div className="mt-3 pt-3 border-t border-white/10 flex flex-wrap items-center justify-between gap-4 text-xs font-mono">
-                  <span className="text-emerald-400 font-bold">
+                <p className="text-slate-700 dark:text-slate-300">{aiAnalysis?.executive_summary}</p>
+                <div className="mt-3 pt-3 border-t border-emerald-200/80 dark:border-white/10 flex flex-wrap items-center justify-between gap-4 text-xs font-mono">
+                  <span className="text-emerald-700 dark:text-emerald-400 font-bold">
                     Total Potential Monthly Reduction: {aiAnalysis?.total_potential_reduction_monthly_tons ?? -50.9} tCO₂e
                   </span>
-                  <span className="text-amber-400 font-bold">
+                  <span className="text-amber-700 dark:text-amber-400 font-bold">
                     Estimated Monthly Cost Savings: ₹{(aiAnalysis?.total_cost_saving_monthly_inr ?? 132800).toLocaleString()}
                   </span>
                 </div>
@@ -1155,46 +1155,46 @@ export default function Predictions() {
                 {(aiAnalysis?.suggestions || []).map((sug) => (
                   <div
                     key={sug.id}
-                    className="p-5 rounded-2xl bg-white/5 hover:bg-white/[0.08] border border-white/10 hover:border-emerald-500/40 transition flex flex-col justify-between group"
+                    className="p-5 rounded-2xl bg-slate-50 dark:bg-white/5 hover:bg-slate-100/80 dark:hover:bg-white/[0.08] border border-slate-200 dark:border-white/10 hover:border-emerald-500/40 transition flex flex-col justify-between group shadow-sm dark:shadow-none"
                   >
                     <div>
                       <div className="flex items-center justify-between gap-2 mb-2">
-                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-white/10 text-slate-300">
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-white dark:bg-white/10 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-transparent">
                           {sug.category}
                         </span>
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase font-mono ${
-                          sug.priority === 'HIGH' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' :
-                          sug.priority === 'MEDIUM' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' :
-                          'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                          sug.priority === 'HIGH' ? 'bg-rose-100 text-rose-700 border border-rose-200 dark:bg-rose-500/20 dark:text-rose-300 dark:border-rose-500/30' :
+                          sug.priority === 'MEDIUM' ? 'bg-amber-100 text-amber-800 border border-amber-200 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-500/30' :
+                          'bg-emerald-100 text-emerald-800 border border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/30'
                         }`}>
                           {sug.priority} PRIORITY
                         </span>
                       </div>
 
-                      <h3 className="text-base font-bold text-white group-hover:text-emerald-400 transition">
+                      <h3 className="text-base font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition">
                         {sug.title}
                       </h3>
 
-                      <p className="text-xs text-slate-300 mt-2 leading-relaxed">
-                        <strong className="text-emerald-400 font-mono">Why: </strong>
+                      <p className="text-xs text-slate-600 dark:text-slate-300 mt-2 leading-relaxed">
+                        <strong className="text-emerald-700 dark:text-emerald-400 font-mono">Why: </strong>
                         {sug.root_cause_analysis}
                       </p>
 
-                      <div className="mt-3 space-y-1.5 text-xs text-slate-300">
+                      <div className="mt-3 space-y-1.5 text-xs text-slate-600 dark:text-slate-300">
                         {sug.actionable_steps.map((step, idx) => (
                           <div key={idx} className="flex items-start gap-2">
-                            <span className="text-emerald-400 font-bold shrink-0">▸</span>
+                            <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0">▸</span>
                             <span>{step}</span>
                           </div>
                         ))}
                       </div>
                     </div>
 
-                    <div className="mt-5 pt-3 border-t border-white/10 flex items-center justify-between text-xs font-mono">
-                      <div className="text-emerald-400 font-bold">
+                    <div className="mt-5 pt-3 border-t border-slate-200 dark:border-white/10 flex items-center justify-between text-xs font-mono">
+                      <div className="text-emerald-700 dark:text-emerald-400 font-bold">
                         {sug.impact_monthly_tco2e} T/mo ({sug.impact_daily_tco2e} T/day)
                       </div>
-                      <div className="text-amber-300 font-bold">
+                      <div className="text-amber-700 dark:text-amber-300 font-bold">
                         Save ₹{sug.cost_saving_monthly_inr.toLocaleString()}/mo
                       </div>
                     </div>
